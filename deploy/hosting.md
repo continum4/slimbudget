@@ -1,9 +1,14 @@
 # Shared hosting (panel with SSH)
 
-You need PHP 8.4+ with `mbstring`, `openssl` and `pdo_mysql`, and MariaDB 10.6+ (MySQL 8 is untested).
+You need PHP 8.4+ with `mbstring`, `openssl`, `pdo_mysql` and `xmlwriter`, and MariaDB 10.6+, MySQL 8.4 or MySQL 5.7 (it works, but it no longer gets security fixes). The PHP of the console can be older than the one of the site: in that case, run the commands with its full path.
 
 1. **Subdomain:** create it in the panel with its document root in `slimbudget/public`, outside any other site. `config/` and `var/` must never be under a public folder.
-2. **Certificate:** turn on HTTPS for the subdomain and redirect HTTP to it.
+2. **Certificate:** turn on HTTPS for the subdomain and redirect HTTP to it in the panel. If it has no such option, add this to `public/.htaccess`, after `RewriteEngine On`:
+   ```apache
+   RewriteCond %{HTTPS} !=on
+   RewriteCond %{REQUEST_URI} !^/\.well-known/
+   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+   ```
 3. **Database:** create one database and two users in the panel, if it lets you: one with every privilege (`db_admin`, only for migrations) and one with `SELECT, INSERT, UPDATE, DELETE` (`db`, for the app). With only one user, use it in `db`.
 4. **Code:**
    ```sh
@@ -25,6 +30,8 @@ You need PHP 8.4+ with `mbstring`, `openssl` and `pdo_mysql`, and MariaDB 10.6+ 
 
 Never load the demo data on a public server: its password is published.
 
+If the panel writes in `public/.htaccess` (cPanel does, to choose the PHP version), run `git update-index --skip-worktree public/.htaccess` so that it does not get in the way of `git pull`.
+
 ## Behind a proxy or CDN
 
 Add its addresses to `trusted_proxies`. Otherwise every visitor counts as one address, and anyone could use up your sign-in attempts.
@@ -43,4 +50,4 @@ mariadb-dump --defaults-extra-file=$HOME/.backup.cnf --single-transaction DATABA
 
 `php bin/user.php <username> "<Name>" <role>` sets a temporary password, turns off two-step verification and clears the failed attempts of that user.
 
-Failed sign-ins go to `var/log/auth.log`, one per line with the address.
+Failed sign-ins go to `var/log/auth.log`, one per line with the address. PHP errors go to `var/log/php.log`.

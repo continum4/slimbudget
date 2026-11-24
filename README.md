@@ -21,7 +21,7 @@ A small self-hosted household budget, built with Slim 4, Twig and PDO. No fronte
 
 ## Requirements
 
-PHP 8.4+ with `mbstring`, `openssl` and `pdo_mysql`, Composer, and MariaDB 10.6+ (developed on MariaDB; MySQL 8 is untested).
+PHP 8.4+ with `mbstring`, `openssl`, `pdo_mysql` and `xmlwriter`, Composer, and MariaDB 10.6+, MySQL 8.4 or MySQL 5.7 (developed on MariaDB; MySQL 5.7 works, but it no longer gets security fixes).
 
 ## Install
 

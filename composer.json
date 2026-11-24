@@ -9,6 +9,7 @@
         "ext-mbstring": "*",
         "ext-openssl": "*",
         "ext-pdo_mysql": "*",
+        "ext-xmlwriter": "*",
         "bacon/bacon-qr-code": "^3.1",
         "php-di/php-di": "^7.1",
         "psr/clock": "^1.0",

@@ -25,11 +25,12 @@ use Slim\Views\Twig;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 
-ini_set('display_errors', '0'); // never on the page; they go to PHP's log
+ini_set('display_errors', '0'); // never on the page; they go to var/log/php.log
 $config = Config::load();
 ini_set('display_errors', $config['env'] === 'dev' ? '1' : '0');
 $root = dirname(__DIR__);
 $var = $config['var_dir'];
+ini_set('error_log', "$var/log/php.log");
 
 $container = new Container([
     'config' => $config,

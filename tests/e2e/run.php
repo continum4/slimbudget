@@ -63,6 +63,7 @@ $check('wrong password', $admin->sees('Wrong username or password.'));
 $admin->post('/login', ['username' => 'demo', 'password' => 'slimbudget-demo']);
 $check('signs in', $admin->path === "/months/$ym", $admin->path);
 
+$check('every table is utf8mb4', $id("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_collation<>'utf8mb4_unicode_ci'") === 0);
 $bill = $id('SELECT MIN(id) FROM bills');
 $groupBill = $id('SELECT MIN(id) FROM bills WHERE group_id IS NOT NULL');
 foreach (["/months/$ym", '/months/2031-01', "/months/$ym/expenses", "/months/$ym/expenses?q=a&person=1&category=x", "/months/$ym/cards", "/months/$ym/bills", "/months/$ym/installments", "/months/$ym/estimates", '/years/' . substr($ym, 0, 4), '/years/2031', '/years/' . substr($ym, 0, 4) . '/trends', '/years/' . substr($ym, 0, 4) . '/trends?fixed=0', '/years/2031/trends', '/review', '/profile', '/users', '/users/1', '/settings', '/catalogs/groups', '/catalogs/categories', '/catalogs/people', '/catalogs/cards', '/catalogs/bills', '/catalogs/categories/1', '/catalogs/bills/1', '/expenses/1', '/installments/1', "/bills/$bill", "/bills/$groupBill"] as $path) {
