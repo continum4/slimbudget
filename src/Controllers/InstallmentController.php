@@ -79,6 +79,7 @@ final class InstallmentController extends Controller
     public function delete(Request $request, Response $response, array $args): Response
     {
         $plan = $this->find($request, 'installment_plans', $args['id']);
+        $this->audit($request, 'plan_deleted', "{$plan['concept']} · {$plan['total_amount']}");
         $this->db->run('DELETE FROM installment_plans WHERE id=?', [$plan['id']]);
         $this->notice('good', 'installments.deleted', ['concept' => $plan['concept']]);
         return $this->redirect($response, '/months/' . Month::current() . '/installments');

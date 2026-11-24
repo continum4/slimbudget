@@ -17,6 +17,6 @@
   </tbody><tfoot><tr><th scope="row">{{ t('app.total') }}</th><td></td><td></td><td data-t="{{ t('app.total') }}" class="num">{{ total|money }}</td></tr></tfoot></table></div></section>
 <section class="card"><h2>{{ t('cards.count', {count: rows|length}) }}</h2>
   <div class="table-box"><table class="ledger"><caption class="visually-hidden">{{ t('cards.title') }}</caption><thead><tr><th scope="col">{{ t('fields.date') }}</th><th scope="col">{{ t('fields.description') }}</th><th scope="col">{{ t('fields.merchant') }}</th><th scope="col">{{ t('fields.card') }}</th><th scope="col" class="num">{{ t('fields.amount') }}</th></tr></thead><tbody>
-  {% for r in rows %}<tr><td class="date">{{ r.bought_on|day }}</td><th scope="row"><a href="{{ r.url }}">{{ r.description }}</a>{% if r.installments %} <span class="pill neutral">{{ t('cards.plan', {count: r.installments}) }}</span>{% endif %}</th><td>{{ r.merchant ?? '—' }}</td><td>{{ r.card }}</td><td class="num">{{ r.amount|money }}</td></tr>{% endfor %}
+  {% for r in rows %}<tr><td class="date">{{ r.bought_on|day }}</td><th scope="row">{% if me.role == 'admin' or r.installments or r.created_by == me.id %}<a href="{{ r.url }}">{{ r.description }}</a>{% else %}{{ r.description }}{% endif %}{% if r.installments %} <span class="pill neutral">{{ t('cards.plan', {count: r.installments}) }}</span>{% endif %}</th><td>{{ r.merchant ?? '—' }}</td><td>{{ r.card }}</td><td class="num">{{ r.amount|money }}</td></tr>{% endfor %}
   </tbody></table></div></section>
 {% endblock %}

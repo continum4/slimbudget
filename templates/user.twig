@@ -6,7 +6,8 @@
   <form method="post" action="/users/{{ user.id }}" class="form-grid two-col">{{ csrf() }}
     {{ include('_user_fields.twig', {v: user}) }}
     <div class="field wide check-row"><label><input type="checkbox" name="active" value="1"{% if user.active %} checked{% endif %}> {{ t('app.active') }}</label>
-      <label><input type="checkbox" name="reset_password" value="1"> {{ t('users.reset') }}</label></div>
+      {% if user.id != me.id %}<label><input type="checkbox" name="reset_password" value="1"> {{ t('users.reset') }}</label>
+      {% if user.totp_secret %}<label><input type="checkbox" name="two_step_off" value="1"> {{ t('users.two_step_off') }}</label>{% endif %}{% endif %}</div>
     <div class="form-actions wide"><button class="primary">{{ t('app.save') }}</button><a class="button" href="/users">{{ t('app.cancel') }}</a></div>
   </form>
 </section>

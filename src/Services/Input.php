@@ -17,7 +17,13 @@ final class Input
 
     public function raw(string $key): string
     {
-        return is_string($this->data[$key] ?? null) ? trim($this->data[$key]) : '';
+        $value = $this->data[$key] ?? null;
+        return self::isText($value) ? trim($value) : '';
+    }
+
+    public static function isText(mixed $value): bool
+    {
+        return is_string($value) && mb_check_encoding($value, 'UTF-8') && !str_contains($value, "\0");
     }
 
     public function text(string $key, string $label, int $max, bool $required = true): ?string
@@ -63,7 +69,7 @@ final class Input
 
     public function id(string $key, string $label, bool $required = true): ?int
     {
-        $value = filter_var($this->raw($key), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $value = filter_var($this->raw($key), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 4294967295]]);
         if ($value === false) {
             return $required ? $this->fail('choose', $label) : null;
         }

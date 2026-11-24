@@ -8,10 +8,14 @@ use App\Middleware\Csrf;
 use App\Middleware\Locale;
 use App\Middleware\SecurityHeaders;
 use App\Middleware\Session;
+use App\Services\ClientIp;
+use App\Services\Clock;
+use App\Services\Gate;
 use App\Services\Money;
 use App\Services\Month;
 use App\Services\Settings;
 use App\Services\Translator;
+use App\Services\TwoFactor;
 use DI\Container;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -21,7 +25,9 @@ use Slim\Views\Twig;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 
+ini_set('display_errors', '0'); // never on the page; they go to PHP's log
 $config = Config::load();
+ini_set('display_errors', $config['env'] === 'dev' ? '1' : '0');
 $root = dirname(__DIR__);
 $var = $config['var_dir'];
 
@@ -31,6 +37,9 @@ $container = new Container([
     Settings::class => static fn (ContainerInterface $c): Settings => new Settings($c->get(Database::class), ['locale' => $config['locale'], 'currency' => $config['currency']]),
     Translator::class => static fn (): Translator => new Translator("$root/lang", $config['locale']),
     Money::class => static fn (ContainerInterface $c): Money => Money::fromCode($c->get(Settings::class)->get('currency'), "$root/config/currencies.json"),
+    ClientIp::class => static fn (): ClientIp => new ClientIp($config['trusted_proxies']),
+    Gate::class => static fn (ContainerInterface $c): Gate => new Gate($c->get(Database::class), $c->get(ClientIp::class), "$var/log/auth.log"),
+    TwoFactor::class => static fn (ContainerInterface $c): TwoFactor => new TwoFactor($c->get(Database::class), new Clock(), $config['key']),
     Twig::class => static function (ContainerInterface $c) use ($root, $var): Twig {
         $twig = Twig::create("$root/templates", ['cache' => "$var/cache", 'auto_reload' => true, 'strict_variables' => true]);
         $env = $twig->getEnvironment();
@@ -66,12 +75,13 @@ $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->add(Csrf::class);
 $app->add(Locale::class);
-$app->add(new Session("$var/sessions", str_starts_with($config['url'], 'https')));
+$https = str_starts_with($config['url'], 'https');
+$app->add(new Session("$var/sessions", $https));
 $errors = $app->addErrorMiddleware($config['env'] === 'dev', false, false);
 $errors->setDefaultErrorHandler(function (Request $request, Throwable $e) use ($app, $container, $config, $var) {
     $code = $e instanceof HttpException ? $e->getCode() : 500;
     if ($code === 500) {
-        Logger::write("$var/log/app.log", sprintf("%s %s\n%s", $request->getMethod(), $request->getUri()->getPath(), $e));
+        Logger::write("$var/log/app.log", sprintf("%s %s\n%s\n", $request->getMethod(), $request->getUri()->getPath(), $e));
     }
     $lang = $container->get(Translator::class);
     $message = match ($code) {
@@ -80,6 +90,6 @@ $errors->setDefaultErrorHandler(function (Request $request, Throwable $e) use ($
     };
     return $container->get(Twig::class)->render($app->getResponseFactory()->createResponse($code), 'error.twig', ['code' => $code, 'message' => $message]);
 });
-$app->add(new SecurityHeaders());
+$app->add(new SecurityHeaders($https && $config['env'] === 'production'));
 
 return $app;

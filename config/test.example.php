@@ -7,5 +7,6 @@ return [
     'locale' => 'en',
     'currency' => 'USD',
     'var_dir' => sys_get_temp_dir() . '/slimbudget-test',
+    'key' => 'only-for-tests-only-for-tests-only-for-tests',
     'db' => ['host' => '127.0.0.1', 'port' => 3306, 'name' => 'slimbudget_test', 'user' => 'slimbudget', 'pass' => ''],
 ];

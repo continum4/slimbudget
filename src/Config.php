@@ -18,6 +18,8 @@ final class Config
             'locale' => 'en',
             'currency' => 'USD',
             'var_dir' => dirname(__DIR__) . '/var', // cache, sessions and logs
+            'key' => '',
+            'trusted_proxies' => [],
         ];
         date_default_timezone_set($config['timezone']);
         return $config;

@@ -10,7 +10,8 @@ A small self-hosted household budget, built with Slim 4, Twig and PDO. No fronte
 - **Installment plans:** a purchase in installments is not an expense; each installment counts when you pay the card. Includes an 18-month projection.
 - **Card payments:** what each card will charge next month, by closing day, without counting any purchase twice.
 - **Trends:** typical month, where spending goes up or down, and what changed, by group and category.
-- **Two roles:** admins manage everything; members record and read.
+- **Two roles:** admins manage everything; members record, read and change only the expenses they recorded.
+- **Two-step verification**, with any authenticator app and recovery codes.
 - **Any language and currency:** both come from JSON files. English and Spanish included.
 - Works on phones, follows the system's dark mode.
 
@@ -20,7 +21,7 @@ A small self-hosted household budget, built with Slim 4, Twig and PDO. No fronte
 
 ## Requirements
 
-PHP 8.4+ with `mbstring` and `pdo_mysql`, Composer, and MariaDB 10.6+ (developed on MariaDB; MySQL 8 is untested).
+PHP 8.4+ with `mbstring`, `openssl` and `pdo_mysql`, Composer, and MariaDB 10.6+ (developed on MariaDB; MySQL 8 is untested).
 
 ## Install
 
@@ -50,11 +51,11 @@ php -S localhost:8080 -t public public/index.php   # try it
 
 To look around first, use `php bin/seed.php demo` on an empty database and sign in as `demo` with the password `slimbudget-demo`.
 
-For daily use, serve `public/` with a real web server: see [`deploy/apache.example.conf`](deploy/apache.example.conf). The web server user needs write access to `var/`.
+For daily use, serve `public/` with a real web server: see [`deploy/apache.example.conf`](deploy/apache.example.conf). The web server user needs write access to `var/`. On shared hosting, follow [`deploy/hosting.md`](deploy/hosting.md).
 
 ## Update
 
-Back up the database, then:
+Back up the database and `config/local.php`, then:
 
 ```sh
 git pull && composer install --no-dev && php bin/migrate.php
@@ -83,7 +84,12 @@ An installation uses one currency. Changing it only changes how amounts are show
 
 ## Security
 
-SlimBudget is meant for a home network or behind a VPN. It has CSRF tokens, a strict Content Security Policy, hashed passwords, login rate limiting and roles, but it has not been audited for the open internet. Please report vulnerabilities privately through GitHub's security advisories.
+- Hashed passwords, two-step verification (its secrets are stored encrypted), and limits by account and by address on failed sign-ins.
+- Changing the password or the two-step verification closes your other sessions. Sessions last 8 hours without use and 24 at most.
+- CSRF tokens, a strict Content Security Policy and prepared statements everywhere.
+- A history of sign-ins, account changes and deletions, in Users.
+
+It has not been audited by a third party: before putting it on the internet, use HTTPS and turn on two-step verification. Please report vulnerabilities privately through GitHub's security advisories.
 
 ## Development
 

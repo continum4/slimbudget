@@ -131,7 +131,8 @@ final class CatalogController extends Controller
     {
         $catalog = $this->catalog($request, $args);
         $row = $this->find($request, $catalog['table'], $args['id']);
-        return $this->attempt($request, $response, "/catalogs/{$catalog['key']}/{$row['id']}", function () use ($catalog, $row): string {
+        return $this->attempt($request, $response, "/catalogs/{$catalog['key']}/{$row['id']}", function () use ($request, $catalog, $row): string {
+            $this->audit($request, 'catalog_deleted', "{$catalog['key']} · {$row['name']}");
             $this->db->run("DELETE FROM {$catalog['table']} WHERE id=?", [$row['id']]);
             $this->notice('good', 'catalogs.deleted', ['name' => $row['name']]);
             return "/catalogs/{$catalog['key']}";

@@ -11,6 +11,7 @@ use Psr\Http\Server\RequestHandlerInterface as Handler;
 final class Session implements MiddlewareInterface
 {
     private const IDLE = 8 * 3600;
+    private const LIFETIME = 24 * 3600;
 
     public function __construct(private string $path, private bool $https)
     {
@@ -22,16 +23,20 @@ final class Session implements MiddlewareInterface
         session_name('slimbudget');
         session_start([
             'cookie_httponly' => true,
-            'cookie_secure' => $this->https,
+            'cookie_secure' => $this->https || $request->getUri()->getScheme() === 'https',
             'cookie_samesite' => 'Lax',
             'use_strict_mode' => true,
             'gc_maxlifetime' => self::IDLE,
+            'gc_probability' => 1, // some systems turn it off and clean only their own folder
+            'gc_divisor' => 100,
         ]);
-        if (isset($_SESSION['seen']) && time() - $_SESSION['seen'] > self::IDLE) {
+        $now = time();
+        if ((isset($_SESSION['seen']) && $now - $_SESSION['seen'] > self::IDLE) || (isset($_SESSION['started']) && $now - $_SESSION['started'] > self::LIFETIME)) {
             session_unset();
             session_regenerate_id(true);
         }
-        $_SESSION['seen'] = time();
+        $_SESSION['seen'] = $now;
+        $_SESSION['started'] ??= $now;
         $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
         // What the user typed in a rejected form lives for a single request
         $_SESSION['old_now'] = $_SESSION['old'] ?? [];

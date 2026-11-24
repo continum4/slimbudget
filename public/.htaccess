@@ -1,0 +1,16 @@
+# Shared hosting: the .htaccess of the folder above denies everything, and this one opens public/ only
+Require all granted
+DirectoryIndex index.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+<IfModule mod_headers.c>
+    Header always setifempty X-Content-Type-Options "nosniff"
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
+</IfModule>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

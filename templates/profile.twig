@@ -21,6 +21,17 @@
     <div class="field"><label for="locale">{{ t('profile.language') }}</label><select id="locale" name="locale"><option value="">{{ t('profile.default_language', {name: languages()[default_locale] ?? default_locale}) }}</option>{{ ui.language_options(me.locale) }}</select></div>
     <button>{{ t('profile.save_language') }}</button>
   </form>
+  <section class="stack">
+    <h2>{{ t('two_step.title') }}</h2>
+    <p>{% if me.totp_secret %}<span class="pill good"><span aria-hidden="true">✓</span> {{ t('two_step.on') }}</span>{% else %}<span class="pill idle"><span aria-hidden="true">○</span> {{ t('two_step.off') }}</span>{% endif %} {{ t('two_step.about') }}</p>
+    <p><a class="button" href="/profile/two-step">{{ t(me.totp_secret ? 'two_step.manage' : 'two_step.set_up') }}</a></p>
+  </section>
+  <form method="post" action="/profile/sessions">
+    <h2>{{ t('profile.sessions') }}</h2>
+    {{ csrf() }}
+    <p class="note">{{ t('profile.sessions_help') }}</p>
+    <button>{{ t('profile.close_sessions') }}</button>
+  </form>
   {% endif %}
 </section>
 {% endblock %}

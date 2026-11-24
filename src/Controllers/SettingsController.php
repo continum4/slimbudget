@@ -34,9 +34,10 @@ final class SettingsController extends Controller
     public function save(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
-        return $this->attempt($request, $response, '/settings', function (Input $in) use ($user): string {
+        return $this->attempt($request, $response, '/settings', function (Input $in) use ($request, $user): string {
             $currency = $in->option('currency', $this->t('settings.currency'), array_keys(Money::currencies(self::CURRENCIES)));
             $locale = $in->option('locale', $this->t('settings.language'), array_map('strval', array_keys($this->translator->available())));
+            $this->audit($request, 'settings_changed', "$currency · $locale");
             $this->settings->set('currency', $currency);
             $this->settings->set('locale', $locale);
             $this->translator->use($user['locale'] ?: $locale);

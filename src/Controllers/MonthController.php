@@ -58,6 +58,7 @@ final class MonthController extends Controller
     {
         $income = $this->find($request, 'incomes', $args['id']);
         $ym = $this->db->value('SELECT ym FROM months WHERE id=?', [$income['month_id']]);
+        $this->audit($request, 'income_deleted', "$ym · {$income['kind']} · {$income['description']} · {$income['amount']}");
         $this->db->run('DELETE FROM incomes WHERE id=?', [$income['id']]);
         $this->notice('good', 'incomes.deleted');
         return $this->redirect($response, "/months/$ym#incomes");

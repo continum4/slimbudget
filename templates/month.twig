@@ -8,7 +8,7 @@
 {% if not s.open %}
 <section class="card"><h2>{{ t('month.not_open', {month: ym|month}) }}</h2>
   <p class="prose">{{ t('month.not_open_text') }}</p>
-  <form method="post" action="/months/{{ ym }}/open">{{ csrf() }}<button class="primary">{{ t('month.open', {month: ym|month}) }}</button></form></section>
+  {% if me.role == 'admin' %}<form method="post" action="/months/{{ ym }}/open">{{ csrf() }}<button class="primary">{{ t('month.open', {month: ym|month}) }}</button></form>{% endif %}</section>
 {% else %}
 {% set top = max(s.total_income, s.paid, s.estimated, 1) %}
 <section class="card summary">
@@ -59,15 +59,15 @@
     <section class="card" id="incomes"><h2>{{ t('incomes.title') }}</h2>
       <table><caption class="visually-hidden">{{ t('incomes.title') }}</caption><tbody>
         {% for i in s.incomes %}{% set label = i.description ?: t('incomes.kinds.' ~ i.kind) %}<tr><th scope="row">{{ label }}</th><td class="num">{{ i.amount|money }}</td>
-          <td class="num"><form method="post" action="/incomes/{{ i.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: label}) }}">{{ csrf() }}<button class="plain" aria-label="{{ t('app.delete_named', {name: label}) }}">{{ t('app.delete') }}</button></form></td></tr>{% endfor %}
+          <td class="num">{% if me.role == 'admin' %}<form method="post" action="/incomes/{{ i.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: label}) }}">{{ csrf() }}<button class="plain" aria-label="{{ t('app.delete_named', {name: label}) }}">{{ t('app.delete') }}</button></form>{% endif %}</td></tr>{% endfor %}
         {% for i in s.incomes_by_spending %}<tr><th scope="row">{{ t('incomes.by_spending', {name: i.name}) }} <small>{{ t('incomes.by_spending_note') }}</small></th><td class="num">{{ i.amount|money }}</td><td></td></tr>{% endfor %}
       </tbody><tfoot><tr><th scope="row">{{ t('app.total') }}</th><td class="num">{{ s.total_income|money }}</td><td></td></tr></tfoot></table>
-      <details class="more"{% if old('kind') %} open{% endif %}><summary>{{ t('incomes.add') }}</summary>
+      {% if me.role == 'admin' %}<details class="more"{% if old('kind') %} open{% endif %}><summary>{{ t('incomes.add') }}</summary>
         <form method="post" action="/months/{{ ym }}/incomes">{{ csrf() }}
           <div class="field"><label for="kind">{{ t('incomes.kind') }}</label><select id="kind" name="kind">{% for k in kinds %}<option value="{{ k }}"{% if old('kind') == k %} selected{% endif %}>{{ t('incomes.kinds.' ~ k) }}</option>{% endfor %}</select></div>
           <div class="field"><label for="description">{{ t('app.optional', {label: t('fields.description')}) }}</label><input id="description" name="description" maxlength="120" value="{{ old('description') }}"></div>
           {{ ui.amount('amount', t('fields.amount'), old('amount')) }}
-          <button class="primary">{{ t('incomes.add') }}</button></form></details>
+          <button class="primary">{{ t('incomes.add') }}</button></form></details>{% endif %}
     </section>
   </div>
 </div>

@@ -28,6 +28,6 @@
     <button>{{ t('bills.save') }}</button>
   </form>
   <h2 class="spaced">{{ t('bills.linked') }}</h2>
-  {% if payments %}<table><caption class="visually-hidden">{{ t('bills.linked') }}</caption><tbody>{% for p in payments %}<tr><td class="date">{{ p.spent_on|day }}</td><td><a href="/expenses/{{ p.id }}">{{ p.description }}</a> <small>{{ p.person }}</small></td><td class="num">{{ p.amount|money }}</td></tr>{% endfor %}</tbody></table>{% else %}<p>{{ t('bills.no_linked') }}</p>{% endif %}
+  {% if payments %}<table><caption class="visually-hidden">{{ t('bills.linked') }}</caption><tbody>{% for p in payments %}<tr><td class="date">{{ p.spent_on|day }}</td><td>{% if me.role == 'admin' or p.created_by == me.id %}<a href="/expenses/{{ p.id }}">{{ p.description }}</a>{% else %}{{ p.description }}{% endif %} <small>{{ p.person }}</small></td><td class="num">{{ p.amount|money }}</td></tr>{% endfor %}</tbody></table>{% else %}<p>{{ t('bills.no_linked') }}</p>{% endif %}
 </section></div>
 {% endblock %}

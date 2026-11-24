@@ -239,5 +239,151 @@ $check('logs out', $admin->path === '/login' && $admin->get("/months/$ym")->path
 $admin->get('/login')->post('/login', ['username' => 'demo', 'password' => 'slimbudget-demo']);
 $check('logging out does not pin a language', $db->value("SELECT locale FROM users WHERE username='demo'") === null);
 
+
+// Members: their own expenses only, no incomes, no opening months
+$db->run('DELETE FROM login_attempts');
+$member->get("/months/$ym/expenses");
+$member->post("/months/$ym/expenses", ['description' => 'Mine', 'amount' => '10'] + $expense);
+$mine = $id("SELECT id FROM expenses WHERE description='Mine'");
+$theirs = $id('SELECT MIN(id) FROM expenses WHERE created_by IS NULL');
+$check('member edits their own', $member->get("/expenses/$mine")->status === 200 && $member->post("/expenses/$mine", ['description' => 'Mine too', 'amount' => '11'] + $expense)->sees('Expense updated.'));
+$check('member cannot see the form of another', $member->get("/expenses/$theirs")->status === 403);
+$member->get("/months/$ym/expenses");
+$check('nor change it', $member->post("/expenses/$theirs", $expense)->status === 403 && $member->get("/months/$ym/expenses")->post("/expenses/$theirs/delete")->status === 403 && $id('SELECT COUNT(*) FROM expenses WHERE id=?', [$theirs]) === 1);
+$check('nor gets a link to it', !str_contains($member->get("/months/$ym/expenses")->body, "\"/expenses/$theirs\"") && str_contains($member->body, "\"/expenses/$mine\""));
+$check('member deletes their own', $member->post("/expenses/$mine/delete")->sees('Expense deleted') && $id("SELECT COUNT(*) FROM audit_log WHERE action='expense_deleted' AND detail LIKE '%Mine too%'") === 1);
+$income = $id('SELECT MIN(id) FROM incomes');
+foreach (["/months/$ym/incomes", "/incomes/$income/delete", '/months/2031-05/open'] as $path) {
+    $check("member 403 $path", $member->get("/months/$ym")->post($path, ['kind' => 'other', 'amount' => '1'])->status === 403);
+}
+$check('member sees no income form', !str_contains($member->get("/months/$ym")->body, '/incomes'));
+$member->get("/months/$ym/expenses");
+$check('member cannot open a month with an expense', $member->post("/months/$ym/expenses", ['spent_on' => '2031-05-02', 'description' => 'Future'] + $expense)->sees('an admin has to open it') && $id("SELECT COUNT(*) FROM months WHERE ym='2031-05'") === 0);
+$check('nor with the bills', $member->post('/months/2031-05/bills/generate')->sees('an admin has to open it') && $id("SELECT COUNT(*) FROM months WHERE ym='2031-05'") === 0);
+
+// Strange input never ends in an error page
+$admin->get("/months/$ym/expenses");
+foreach (['arrays' => ['description' => ['a' => 'b'], 'amount' => ['9']], 'invalid UTF-8' => ['description' => "\xff\xfe"], 'null byte' => ['description' => "a\0b"], 'huge id' => ['category_id' => '99999999999999']] as $name => $data) {
+    $admin->post("/months/$ym/expenses", $data + $expense);
+    $check("strange input: $name", $admin->status === 200 && $admin->path === "/months/$ym/expenses" && !preg_match('/(Warning|Deprecated|Notice):/', $admin->body), $admin->status);
+}
+$check('headers', (static function () use ($config): bool {
+    $headers = array_change_key_case(get_headers($config['url'] . '/login', true));
+    return isset($headers['permissions-policy'], $headers['cross-origin-opener-policy'], $headers['content-security-policy']) && !isset($headers['strict-transport-security']);
+})());
+
+// Passwords and sessions
+$sign = static function (string $username, string $password) use ($config): Client {
+    $client = new Client($config['url']);
+    return $client->get('/login')->post('/login', ['username' => $username, 'password' => $password]);
+};
+$change = static fn (Client $c, string $current, string $new): Client => $c->get('/profile')->post('/profile/password', ['current_password' => $current, 'password' => $new, 'password_confirm' => $new]);
+$stolen = $sign('member', 'a-longer-one');
+$check('two sessions at once', $stolen->path === "/months/$ym");
+$check('same password', $change($member, 'a-longer-one', 'a-longer-one')->sees('must be different'));
+$check('weak password', $change($member, 'a-longer-one', '1111111111')->sees('too easy to guess'));
+$check('null byte in a password', $change($member, 'a-longer-one', "null\0inside-it")->sees('up to 72 bytes'));
+$change($member, 'a-longer-one', 'another-long-one');
+$check('changing the password keeps this session and says so', $member->path === "/months/$ym" && $member->sees('Password changed.'));
+$check('and closes the others', $stolen->get("/months/$ym")->path === '/login');
+$stolen = $sign('member', 'another-long-one');
+$member->get('/profile')->post('/profile/sessions');
+$check('signing out everywhere else', $member->sees('Your other sessions were closed') && $stolen->get("/months/$ym")->path === '/login');
+for ($i = 0; $i < 6; $i++) {
+    $change($member, "wrong$i", 'yet-another-long-one');
+}
+$check('guessing the current password is limited', $member->sees('Too many attempts') && $change($member, 'another-long-one', 'yet-another-long-one')->sees('Too many attempts'));
+$db->run('DELETE FROM login_attempts');
+$memberId = $id("SELECT id FROM users WHERE username='member'");
+$edit = ['username' => 'member', 'name' => 'Demo Member', 'role' => 'member', 'person_id' => 2, 'active' => 1];
+$admin->get("/users/$memberId")->post("/users/$memberId", $edit + ['reset_password' => 1]);
+$check('a reset closes the sessions', preg_match('/Temporary password: (\S+) \(/', html_entity_decode($admin->body), $m) === 1 && $member->get("/months/$ym")->path === '/login');
+$check('temporary password works', $sign('member', $m[1])->path === '/profile');
+$db->run('UPDATE users SET password_expires_at=NOW() - INTERVAL 2 DAY WHERE id=?', [$memberId]);
+$check('temporary password expires', $sign('member', $m[1])->sees('temporary password expired'));
+$adminHash = $db->value("SELECT password_hash FROM users WHERE username='demo'");
+$admin->get('/users/1')->post('/users/1', ['username' => 'demo', 'name' => 'Demo Admin', 'role' => 'admin', 'person_id' => 1, 'active' => 1, 'reset_password' => 1, 'two_step_off' => 1]);
+$check('no resetting yourself without the password', $db->value("SELECT password_hash FROM users WHERE username='demo'") === $adminHash);
+$db->run('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?', [password_hash('slimbudget-demo', PASSWORD_DEFAULT), $memberId]);
+
+// Sign-in limits. The throttle is tried directly: attempts that are still being checked already count
+$throttle = new App\Services\Throttle($db);
+$db->run('DELETE FROM login_attempts');
+$passed = count(array_filter(array_map(static fn (): ?int => $throttle->attempt('alex', '203.0.113.1'), range(1, 40))));
+$check('simultaneous attempts share the limit', $passed === 5, $passed);
+$db->run('DELETE FROM login_attempts');
+$passed = count(array_filter(array_map(static fn (int $i): ?int => $throttle->attempt("user$i", '203.0.113.1'), range(1, 40))));
+$check('many accounts from one address', $passed === 20, $passed);
+$db->run('DELETE FROM login_attempts');
+$passed = count(array_filter(array_map(static fn (int $i): ?int => $throttle->attempt('alex', "203.0.113.$i"), range(1, 60))));
+$check('one account from many addresses', $passed === 30, $passed);
+$check('a known address still gets in', $throttle->attempt('alex', '198.51.100.7', null) !== null && $throttle->attempt('alex', '198.51.100.7') === null);
+$throttle->clear('alex', '203.0.113.1');
+$check('signing in forgives one address only', $id("SELECT COUNT(*) FROM login_attempts WHERE username='alex'") === 30);
+$db->run('DELETE FROM login_attempts');
+$sign("mem\nber", 'nope');
+$sign('member', 'nope');
+$log = (string) file_get_contents("{$config['var_dir']}/log/auth.log");
+$check('failures are logged', str_contains($log, 'failed login user=member ip=127.0.0.1') && str_contains($log, 'user=mem?ber'));
+$check('logs are private', (fileperms("{$config['var_dir']}/log/auth.log") & 0007) === 0);
+$db->run('DELETE FROM login_attempts');
+
+// Two-step verification
+$totp = static fn (string $secret, int $steps = 0): string => OTPHP\TOTP::createFromSecret($secret, new App\Services\Clock())->at(time() + 30 * $steps);
+$member = $sign('member', 'slimbudget-demo');
+$other = $sign('member', 'slimbudget-demo');
+$member->get('/profile/two-step');
+$check('set up shows a QR and the key', str_contains($member->body, 'data:image/svg+xml;base64,') && preg_match('/<code>([A-Z2-7 ]+)<\/code>/', $member->body, $m) === 1);
+$secret = str_replace(' ', '', $m[1]);
+$check('needs the password', $member->post('/profile/two-step', ['code' => $totp($secret), 'current_password' => 'nope'])->sees('current password is not right'));
+$check('needs a right code', $member->post('/profile/two-step', ['code' => '000000', 'current_password' => 'slimbudget-demo'])->sees('That code is not right'));
+$member->post('/profile/two-step', ['code' => $totp($secret), 'current_password' => 'slimbudget-demo']);
+preg_match_all('/<code>([0-9-]{19})<\/code>/', $member->body, $codes);
+$check('turned on with ten recovery codes', $member->sees('is on') && count($codes[1]) === 10);
+$check('codes are shown once', !preg_match('/<code>[0-9-]{19}/', $member->get('/profile/two-step')->body) && $member->sees('10 recovery codes left'));
+$check('turning it on closes the other sessions', $other->get("/months/$ym")->path === '/login');
+$stored = (string) $db->value('SELECT totp_secret FROM users WHERE id=?', [$memberId]);
+$check('the secret is encrypted', $stored !== '' && !str_contains($stored, $secret) && !str_contains((string) base64_decode($stored), $secret));
+$db->run('UPDATE users SET locale=? WHERE id=?', ['es', $memberId]);
+$half = $sign('member', 'slimbudget-demo');
+$check('the code page speaks the user\'s language', $half->sees('Los 6 dígitos'));
+$db->run('UPDATE users SET locale=NULL WHERE id=?', [$memberId]);
+$check('the password alone is not enough', $half->path === '/login/code' && $half->get("/months/$ym")->path === '/login');
+$check('wrong code', $half->get('/login/code')->post('/login/code', ['code' => '000000'])->sees('Wrong code'));
+$check('a used code does not work again', $half->post('/login/code', ['code' => $totp($secret)])->sees('Wrong code'));
+$check('the next code works', $half->post('/login/code', ['code' => $totp($secret, 1)])->path === "/months/$ym", $half->path);
+$half = $sign('member', 'slimbudget-demo');
+$check('recovery code', $half->post('/login/code', ['code' => str_replace('-', ' ', $codes[1][0])])->path === "/months/$ym" && $half->sees('9 left'));
+$half = $sign('member', 'slimbudget-demo');
+$check('recovery codes work once', $half->post('/login/code', ['code' => $codes[1][0]])->sees('Wrong code'));
+for ($i = 0; $i < 5; $i++) {
+    $half->post('/login/code', ['code' => "00000$i"]);
+}
+$check('codes are limited', $half->sees('Too many attempts') && $half->get('/login/code')->path === '/login');
+$db->run('DELETE FROM login_attempts');
+$half = $sign('member', 'slimbudget-demo');
+$member->get('/profile/two-step')->post('/profile/two-step/codes', ['current_password' => 'slimbudget-demo']);
+preg_match_all('/<code>([0-9-]{19})<\/code>/', $member->body, $renewed);
+$check('new recovery codes replace the old', count($renewed[1]) === 10 && $half->post('/login/code', ['code' => $codes[1][1]])->sees('Wrong code'));
+$check('turning it off needs the password', $member->get('/profile/two-step')->post('/profile/two-step/off', ['current_password' => 'nope'])->sees('current password is not right'));
+$admin->get("/users/$memberId")->post("/users/$memberId", $edit + ['two_step_off' => 1]);
+$check('an admin turns it off for someone', $db->value('SELECT totp_secret FROM users WHERE id=?', [$memberId]) === null && $id('SELECT COUNT(*) FROM recovery_codes') === 0 && $member->get("/months/$ym")->path === '/login');
+$check('and the password is enough again', $sign('member', 'slimbudget-demo')->path === "/months/$ym");
+$admin->get('/users');
+$check('history', $admin->sees('Recent activity') && $admin->sees('User updated') && $admin->sees('member · two-step turned off') && $admin->sees('Expense deleted'));
+$check('no raw keys in the history', !str_contains($admin->body, 'audit.actions.'));
+foreach (['es' => 'Verificación en dos pasos', 'en' => 'Two-step verification'] as $locale => $text) {
+    $admin->get('/profile')->post('/profile/language', ['locale' => $locale]);
+    $check("two-step page in $locale", $admin->get('/profile/two-step')->sees($text) && !str_contains($admin->body, 'two_step.'));
+}
+$admin->get('/profile')->post('/profile/language', ['locale' => '']);
+
+// Sessions end
+$admin->get("/months/$ym");
+foreach (glob("{$config['var_dir']}/sessions/sess_*") as $file) {
+    file_put_contents($file, preg_replace('/started\|i:\d+/', 'started|i:' . (time() - 25 * 3600), (string) file_get_contents($file)));
+}
+$check('sessions last a day at most', $admin->get("/months/$ym")->path === '/login');
+
 echo "$checks checks, $failures failures\n";
 exit($failures ? 1 : 0);

@@ -69,7 +69,7 @@ final class ExpenseController extends Controller
         return $this->attempt($request, $response, "/months/{$args['ym']}/expenses", function (Input $in) use ($request): string {
             $fields = $this->fields($in);
             $ym = substr($fields['spent_on'], 0, 7);
-            $this->db->insert('expenses', $fields + ['month_id' => $this->budget->ensureMonth($ym), 'created_by' => $request->getAttribute('user')['id']]);
+            $this->db->insert('expenses', $fields + ['month_id' => $this->openMonth($request, $ym), 'created_by' => $request->getAttribute('user')['id']]);
             $this->notice('good', 'expenses.saved', ['month' => $this->translator->month($ym), 'description' => $fields['description']]);
             return "/months/$ym/expenses";
         });
@@ -78,16 +78,18 @@ final class ExpenseController extends Controller
     public function edit(Request $request, Response $response, array $args): Response
     {
         $expense = $this->db->row(self::SELECT . ' WHERE x.id=?', [(int) $args['id']]) ?? throw new HttpNotFoundException($request);
+        $this->requireOwner($request, $expense);
         return $this->render($response, 'expense.twig', $this->lists((int) $expense['category_id'], (int) $expense['person_id'], (int) $expense['card_id']) + ['ym' => $expense['ym'], 'expense' => $expense]);
     }
 
     public function update(Request $request, Response $response, array $args): Response
     {
         $expense = $this->find($request, 'expenses', $args['id']);
-        return $this->attempt($request, $response, "/expenses/{$expense['id']}", function (Input $in) use ($expense): string {
+        $this->requireOwner($request, $expense);
+        return $this->attempt($request, $response, "/expenses/{$expense['id']}", function (Input $in) use ($request, $expense): string {
             $fields = $this->fields($in) + ['needs_review' => $in->checkbox('needs_review')];
             // The month follows the date only when it changes: a bill can be paid on another month's date
-            $monthId = $fields['spent_on'] === $expense['spent_on'] ? (int) $expense['month_id'] : $this->budget->ensureMonth(substr($fields['spent_on'], 0, 7));
+            $monthId = $fields['spent_on'] === $expense['spent_on'] ? (int) $expense['month_id'] : $this->openMonth($request, substr($fields['spent_on'], 0, 7));
             $this->db->update('expenses', (int) $expense['id'], $fields + ['month_id' => $monthId]);
             $this->notice('good', 'expenses.updated');
             return '/months/' . $this->db->value('SELECT ym FROM months WHERE id=?', [$monthId]) . '/expenses';
@@ -97,7 +99,9 @@ final class ExpenseController extends Controller
     public function delete(Request $request, Response $response, array $args): Response
     {
         $expense = $this->find($request, 'expenses', $args['id']);
+        $this->requireOwner($request, $expense);
         $ym = $this->db->value('SELECT ym FROM months WHERE id=?', [$expense['month_id']]);
+        $this->audit($request, 'expense_deleted', "{$expense['spent_on']} · {$expense['description']} · {$expense['amount']}");
         $this->db->run('DELETE FROM expenses WHERE id=?', [$expense['id']]);
         $this->notice('good', 'expenses.deleted', ['description' => $expense['description']]);
         return $this->redirect($response, "/months/$ym/expenses");
@@ -124,10 +128,10 @@ final class ExpenseController extends Controller
         $first = "{$args['ym']}-01";
         $rows = $this->db->all(
             "SELECT * FROM (
-               SELECT x.spent_on bought_on, x.description, x.amount, x.merchant, k.name card, NULL installments, CONCAT('/expenses/', x.id) url
+               SELECT x.spent_on bought_on, x.description, x.amount, x.merchant, k.name card, NULL installments, CONCAT('/expenses/', x.id) url, x.created_by
                FROM expenses x JOIN months m ON m.id=x.month_id JOIN cards k ON k.id=x.card_id WHERE m.ym=?
                UNION ALL
-               SELECT p.purchased_on, p.concept, p.total_amount, p.merchant, k.name, p.installments, CONCAT('/installments/', p.id)
+               SELECT p.purchased_on, p.concept, p.total_amount, p.merchant, k.name, p.installments, CONCAT('/installments/', p.id), NULL
                FROM installment_plans p JOIN cards k ON k.id=p.card_id WHERE p.purchased_on BETWEEN ? AND LAST_DAY(?)
              ) purchases ORDER BY bought_on DESC",
             [$args['ym'], $first, $first]

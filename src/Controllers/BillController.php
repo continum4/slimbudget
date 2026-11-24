@@ -22,9 +22,11 @@ final class BillController extends Controller
 
     public function generate(Request $request, Response $response, array $args): Response
     {
-        $count = $this->budget->generateBills($args['ym'], $this->budget->ensureMonth($args['ym']));
-        $this->notice('good', $count ? 'bills.generated' : 'bills.none_missing', ['count' => $count]);
-        return $this->redirect($response, "/months/{$args['ym']}/bills");
+        return $this->attempt($request, $response, "/months/{$args['ym']}/bills", function () use ($request, $args): string {
+            $count = $this->budget->generateBills($args['ym'], $this->openMonth($request, $args['ym']));
+            $this->notice('good', $count ? 'bills.generated' : 'bills.none_missing', ['count' => $count]);
+            return "/months/{$args['ym']}/bills";
+        });
     }
 
     private function bill(Request $request, string $id): array
@@ -45,7 +47,7 @@ final class BillController extends Controller
         return $this->render($response, 'bill.twig', [
             'ym' => $bill['ym'], 'bill' => $bill, 'categories' => $this->categories((int) $bill['category_id']), 'people' => $this->options('people'),
             'cards' => $this->options('cards'), 'default_person' => $request->getAttribute('user')['person_id'],
-            'payments' => $this->db->all('SELECT x.id, x.spent_on, x.description, x.amount, p.name person FROM expenses x JOIN people p ON p.id=x.person_id WHERE x.bill_id=? ORDER BY x.spent_on', [$bill['id']]),
+            'payments' => $this->db->all('SELECT x.id, x.spent_on, x.description, x.amount, x.created_by, p.name person FROM expenses x JOIN people p ON p.id=x.person_id WHERE x.bill_id=? ORDER BY x.spent_on', [$bill['id']]),
         ]);
     }
 

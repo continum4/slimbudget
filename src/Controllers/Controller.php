@@ -4,13 +4,17 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Database;
+use App\Services\Audit;
 use App\Services\Budget;
 use App\Services\Input;
 use App\Services\Money;
+use App\Services\Month;
+use App\Services\Throttle;
 use App\Services\Translator;
 use App\Services\ValidationError;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Exception\HttpForbiddenException;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Views\Twig;
 
@@ -68,8 +72,41 @@ abstract class Controller
             $this->notice('error', $key);
         }
         unset($data['_csrf'], $data['password'], $data['password_confirm'], $data['current_password']);
-        $_SESSION['old'] = $data;
+        $_SESSION['old'] = array_filter($data, Input::isText(...));
         return $this->redirect($response, $errorUrl);
+    }
+
+    protected function isAdmin(Request $request): bool
+    {
+        return $request->getAttribute('user')['role'] === 'admin';
+    }
+
+    /** Members only change the expenses they recorded. */
+    protected function requireOwner(Request $request, array $expense): void
+    {
+        if (!$this->isAdmin($request) && (int) $expense['created_by'] !== (int) $request->getAttribute('user')['id']) {
+            throw new HttpForbiddenException($request);
+        }
+    }
+
+    /** Only admins open months, except the current one: it opens with the first expense. */
+    protected function openMonth(Request $request, string $ym): int
+    {
+        if (!$this->isAdmin($request) && $ym !== Month::current() && !$this->budget->month($ym)) {
+            throw new ValidationError($this->t('month.admin_opens', ['month' => $this->translator->month($ym)]));
+        }
+        return $this->budget->ensureMonth($ym);
+    }
+
+    protected function deny(Response $response, string $key, string $url): Response
+    {
+        $this->notice('error', $key, ['minutes' => Throttle::WINDOW_MINUTES]);
+        return $this->redirect($response, $url);
+    }
+
+    protected function audit(Request $request, string $action, string $detail = ''): void
+    {
+        (new Audit($this->db))->record((int) $request->getAttribute('user')['id'], $action, $detail);
     }
 
     protected function find(Request $request, string $table, string $id): array

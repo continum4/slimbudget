@@ -24,7 +24,8 @@ final class Authenticate implements MiddlewareInterface
     public function process(Request $request, Handler $handler): Response
     {
         $user = isset($_SESSION['user_id']) ? $this->db->row('SELECT * FROM users WHERE id=? AND active=1', [$_SESSION['user_id']]) : null;
-        if (!$user) {
+        // A new password or two-step change raises the version and leaves the other sessions out
+        if (!$user || (int) $user['session_version'] !== ($_SESSION['version'] ?? 0)) {
             unset($_SESSION['user_id']);
             return (new PsrResponse(302))->withHeader('Location', '/login');
         }
@@ -39,7 +40,9 @@ final class Authenticate implements MiddlewareInterface
         $env->addGlobal('current_ym', Month::current());
         $env->addGlobal('review_count', (int) $this->db->value('SELECT COUNT(*) FROM expenses WHERE needs_review=1'));
         $env->addGlobal('notices', $_SESSION['notices'] ?? []);
-        unset($_SESSION['notices']);
+        if ($path !== '/') {
+            unset($_SESSION['notices']); // the home page only redirects: the next one shows them
+        }
         return $handler->handle($request->withAttribute('user', $user));
     }
 }

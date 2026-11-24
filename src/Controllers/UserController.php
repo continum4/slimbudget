@@ -3,20 +3,35 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Database;
+use App\Services\Audit;
+use App\Services\Budget;
+use App\Services\Gate;
 use App\Services\Input;
+use App\Services\Money;
+use App\Services\Password;
+use App\Services\Translator;
+use App\Services\TwoFactor;
 use App\Services\ValidationError;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Views\Twig;
 
 final class UserController extends Controller
 {
     private const ROLES = ['admin', 'member'];
+    private const ACTIVITY = 30;
+
+    public function __construct(Database $db, Twig $twig, Budget $budget, Translator $translator, Money $money, private Gate $gate, private TwoFactor $twoFactor)
+    {
+        parent::__construct($db, $twig, $budget, $translator, $money);
+    }
 
     public function index(Request $request, Response $response): Response
     {
         return $this->render($response, 'users.twig', [
             'users' => $this->db->all('SELECT u.*, p.name person FROM users u LEFT JOIN people p ON p.id=u.person_id ORDER BY u.active DESC, u.name'),
-            'people' => $this->options('people'), 'roles' => self::ROLES,
+            'people' => $this->options('people'), 'roles' => self::ROLES, 'activity' => (new Audit($this->db))->latest(self::ACTIVITY),
         ]);
     }
 
@@ -32,17 +47,13 @@ final class UserController extends Controller
         ];
     }
 
-    public static function temporaryPassword(): string
-    {
-        return rtrim(strtr(base64_encode(random_bytes(9)), '+/', 'xy'), '=');
-    }
-
     public function create(Request $request, Response $response): Response
     {
-        return $this->attempt($request, $response, '/users', function (Input $in): string {
-            $password = self::temporaryPassword();
+        return $this->attempt($request, $response, '/users', function (Input $in) use ($request): string {
+            $password = Password::temporary();
             $fields = $this->fields($in);
-            $this->db->insert('users', $fields + ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
+            $this->db->insert('users', $fields + Password::temporaryFields($password));
+            $this->gate->record($request, (int) $request->getAttribute('user')['id'], 'user_created', $fields['username']);
             $this->notice('good', 'users.created', ['username' => $fields['username'], 'password' => $password]);
             return '/users';
         });
@@ -58,17 +69,28 @@ final class UserController extends Controller
     {
         $user = $this->find($request, 'users', $args['id']);
         $me = $request->getAttribute('user');
-        return $this->attempt($request, $response, "/users/{$user['id']}", function (Input $in) use ($user, $me): string {
+        return $this->attempt($request, $response, "/users/{$user['id']}", function (Input $in) use ($request, $user, $me): string {
             $fields = $this->fields($in) + ['active' => $in->checkbox('active')];
             if ((int) $user['id'] === (int) $me['id'] && (!$fields['active'] || $fields['role'] !== 'admin')) {
                 throw new ValidationError($this->t('users.self_lockout'));
             }
-            $reset = $in->checkbox('reset_password');
-            $password = self::temporaryPassword();
+            // On their own account it goes through the profile, which asks for the password
+            $other = (int) $user['id'] !== (int) $me['id'];
+            $reset = $other && $in->checkbox('reset_password');
+            $password = Password::temporary();
             if ($reset) {
-                $fields += ['password_hash' => password_hash($password, PASSWORD_DEFAULT), 'must_change_password' => 1];
+                $fields += Password::temporaryFields($password);
             }
             $this->db->update('users', (int) $user['id'], $fields);
+            $changes = array_keys(array_filter(['password' => $reset, 'two_step_off' => $other && $in->checkbox('two_step_off') && $user['totp_secret'] !== null, 'role' => $fields['role'] !== $user['role'], 'active' => $fields['active'] !== (int) $user['active']]));
+            if (in_array('two_step_off', $changes, true)) {
+                $this->twoFactor->disable((int) $user['id']);
+            }
+            if ($changes) {
+                // Whatever was open under the old password, role or status closes
+                $this->db->run('UPDATE users SET session_version=session_version+1 WHERE id=?', [$user['id']]);
+            }
+            $this->gate->record($request, (int) $me['id'], 'user_updated', trim($fields['username'] . ' · ' . implode(', ', array_map(fn (string $change): string => $this->t("users.changes.$change"), $changes)), ' ·'));
             $this->notice('good', $reset ? 'users.updated_password' : 'users.updated', ['password' => $password]);
             return '/users';
         });

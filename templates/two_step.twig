@@ -1,0 +1,42 @@
+{% extends 'base.twig' %}
+{% block title %}{{ t('two_step.title') }}{% endblock %}
+{% macro password() %}<div class="field"><label for="current_password">{{ t('profile.current') }}</label><input id="current_password" name="current_password" type="password" autocomplete="current-password" required></div>{% endmacro %}
+{% block content %}
+{% if codes %}
+<section class="card narrow">
+  <h1>{{ t('two_step.recovery') }}</h1>
+  <p class="notice info"><span class="icon" aria-hidden="true">◔</span> {{ t('two_step.recovery_once') }}</p>
+  <ul class="codes">{% for c in codes %}<li><code>{{ c }}</code></li>{% endfor %}</ul>
+  <p><a class="button primary" href="/profile">{{ t('two_step.saved_them') }}</a></p>
+</section>
+{% elseif enabled %}
+<section class="card narrow">
+  <h1>{{ t('two_step.title') }}</h1>
+  <p><span class="pill good"><span aria-hidden="true">✓</span> {{ t('two_step.on') }}</span> {{ t('two_step.codes_left', {count: left}) }}</p>
+  <form method="post" action="/profile/two-step/codes">{{ csrf() }}
+    <input type="hidden" name="username" autocomplete="username" value="{{ me.username }}">
+    {{ _self.password() }}
+    <p class="note">{{ t('two_step.renew_help') }}</p>
+    <div class="form-actions"><button>{{ t('two_step.renew') }}</button><button class="danger" formaction="/profile/two-step/off">{{ t('two_step.turn_off') }}</button></div>
+  </form>
+  <p><a href="/profile">{{ t('two_step.back') }}</a></p>
+</section>
+{% elseif not available %}
+<section class="card narrow"><h1>{{ t('two_step.title') }}</h1><p>{{ t('two_step.needs_key') }}</p><p><a href="/profile">{{ t('two_step.back') }}</a></p></section>
+{% else %}
+<section class="card narrow">
+  <h1>{{ t('two_step.title') }}</h1>
+  <p>{{ t('two_step.scan') }}</p>
+  <p class="qr"><img src="{{ qr }}" width="220" height="220" alt="{{ t('two_step.qr_alt') }}"></p>
+  <p><a href="{{ uri }}">{{ t('two_step.open_app') }}</a></p>
+  <details class="more"><summary>{{ t('two_step.by_hand') }}</summary><p class="secret"><code>{{ secret }}</code></p></details>
+  <form method="post" action="/profile/two-step">{{ csrf() }}
+    <input type="hidden" name="username" autocomplete="username" value="{{ me.username }}">
+    <div class="field"><label for="code">{{ t('two_step.code') }}</label><small id="code-hint">{{ t('two_step.code_hint') }}</small><input id="code" name="code" class="code" autocomplete="one-time-code" inputmode="numeric" pattern="\d{3}\s?\d{3}" maxlength="7" aria-describedby="code-hint" required></div>
+    {{ _self.password() }}
+    <button class="primary">{{ t('two_step.turn_on') }}</button>
+  </form>
+  <p><a href="/profile">{{ t('two_step.back') }}</a></p>
+</section>
+{% endif %}
+{% endblock %}
