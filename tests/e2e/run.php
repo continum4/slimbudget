@@ -119,12 +119,12 @@ foreach ($before as $line) {
 $admin->get("/months/$ym/estimates");
 $admin->post("/months/$ym/estimates", ['estimates' => $lines]);
 $check('saving estimates changes nothing by itself', $admin->sees('Estimates saved.') && $before == $db->all('SELECT category_id, mode, amount FROM estimates e JOIN months m ON m.id=e.month_id WHERE m.ym=? ORDER BY 1', [$ym]));
-$summary = new App\Services\Budget($db)->summary($ym);
+$summary = (new App\Services\Budget($db))->summary($ym);
 $check('paid equals the sum of expenses', abs($summary['paid'] - (float) $db->value('SELECT SUM(amount) FROM expenses x JOIN months m ON m.id=x.month_id WHERE m.ym=?', [$ym])) < 0.005);
 $check('groups and categories are sorted', array_column($summary['groups'], 'name') === (static function (array $n): array { sort($n); return $n; })(array_column($summary['groups'], 'name')));
 $admin->get("/months/$ym");
 $admin->post("/months/$ym/incomes", ['kind' => 'other', 'description' => 'Sale', 'amount' => '100']);
-$check('income added', abs(new App\Services\Budget($db)->summary($ym)['total_income'] - $summary['total_income'] - 100) < 0.005);
+$check('income added', abs((new App\Services\Budget($db))->summary($ym)['total_income'] - $summary['total_income'] - 100) < 0.005);
 $admin->post('/incomes/' . $id("SELECT id FROM incomes WHERE description='Sale'") . '/delete');
 
 // Catalogs and users

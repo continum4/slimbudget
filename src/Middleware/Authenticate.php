@@ -26,12 +26,12 @@ final class Authenticate implements MiddlewareInterface
         $user = isset($_SESSION['user_id']) ? $this->db->row('SELECT * FROM users WHERE id=? AND active=1', [$_SESSION['user_id']]) : null;
         if (!$user) {
             unset($_SESSION['user_id']);
-            return new PsrResponse(302)->withHeader('Location', '/login');
+            return (new PsrResponse(302))->withHeader('Location', '/login');
         }
         $this->translator->use($user['locale'] ?: $this->settings->get('locale'));
         $path = $request->getUri()->getPath();
         if ($user['must_change_password'] && !in_array($path, ['/profile', '/profile/password', '/logout'], true)) {
-            return new PsrResponse(302)->withHeader('Location', '/profile');
+            return (new PsrResponse(302))->withHeader('Location', '/profile');
         }
         $env = $this->twig->getEnvironment();
         $env->addGlobal('me', $user);

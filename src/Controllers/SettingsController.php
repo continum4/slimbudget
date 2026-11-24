@@ -26,7 +26,7 @@ final class SettingsController extends Controller
     {
         $currencies = [];
         foreach (Money::currencies(self::CURRENCIES) as $code => $currency) {
-            $currencies[$code] = $currency['name'] . ' — ' . new Money($currency)->format(1234.5);
+            $currencies[$code] = $currency['name'] . ' — ' . (new Money($currency))->format(1234.5);
         }
         return $this->render($response, 'settings.twig', ['currencies' => $currencies, 'currency' => $this->settings->get('currency'), 'default_locale' => $this->settings->get('locale')]);
     }
