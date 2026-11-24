@@ -28,7 +28,7 @@
 {% endmacro %}
 
 {% macro radios(name, legend, options, value) %}
-<fieldset class="field choices"><legend>{{ legend }}</legend>
+<fieldset class="field choices inline"><legend>{{ legend }}</legend>
   {% for key, label in options %}<label><input type="radio" name="{{ name }}" value="{{ key }}" required{% if key == value %} checked{% endif %}> {{ label }}</label>{% endfor %}
 </fieldset>
 {% endmacro %}
