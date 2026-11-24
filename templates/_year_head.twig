@@ -1,0 +1,3 @@
+{# year, view: summary|trends, suffix of the year links #}
+<div class="page-head"><h1>{{ t('nav.year') }}</h1><nav class="month-nav" aria-label="{{ t('year.change') }}"><a href="/years/{{ year - 1 }}{{ suffix }}" aria-label="{{ t('year.previous') }}"><span aria-hidden="true">‹</span></a><strong>{{ year }}</strong><a href="/years/{{ year + 1 }}{{ suffix }}" aria-label="{{ t('year.next') }}"><span aria-hidden="true">›</span></a></nav></div>
+<nav class="tabs" aria-label="{{ t('year.views') }}"><a href="/years/{{ year }}"{% if view == 'summary' %} aria-current="page"{% endif %}>{{ t('year.summary') }}</a><a href="/years/{{ year }}/trends"{% if view == 'trends' %} aria-current="page"{% endif %}>{{ t('trends.title') }}</a></nav>

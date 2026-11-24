@@ -25,8 +25,11 @@ if ((int) $db->value('SELECT COUNT(*) FROM categories') > 0) {
 
 function seedStarter(Database $db, string $file): void
 {
-    foreach (json_decode(file_get_contents($file), true, 4, JSON_THROW_ON_ERROR) as $group => $categories) {
-        $groupId = $db->insert('category_groups', ['name' => $group]);
+    $starter = json_decode(file_get_contents($file), true, 4, JSON_THROW_ON_ERROR);
+    $kinds = $starter['_kinds'] ?? [];
+    unset($starter['_kinds']);
+    foreach ($starter as $group => $categories) {
+        $groupId = $db->insert('category_groups', ['name' => $group, 'kind' => $kinds[$group] ?? 'variable']);
         foreach ($categories as $name => $mode) {
             $db->insert('categories', ['group_id' => $groupId, 'name' => $name, 'mode' => $mode]);
         }

@@ -9,6 +9,7 @@ A small self-hosted household budget, built with Slim 4, Twig and PDO. No fronte
 - **Bills:** recurring bills are created each month; their status comes from the payments you record.
 - **Installment plans:** a purchase in installments is not an expense; each installment counts when you pay the card. Includes an 18-month projection.
 - **Card payments:** what each card will charge next month, by closing day, without counting any purchase twice.
+- **Trends:** typical month, where spending goes up or down, and what changed, by group and category.
 - **Two roles:** admins manage everything; members record and read.
 - **Any language and currency:** both come from JSON files. English and Spanish included.
 - Works on phones, follows the system's dark mode.

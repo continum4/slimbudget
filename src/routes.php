@@ -57,6 +57,7 @@ return static function (App $app): void {
         $g->post("/installments/$id/delete", [InstallmentController::class, 'delete']);
 
         $g->get('/years/{year:20\d{2}}', [YearController::class, 'show']);
+        $g->get('/years/{year:20\d{2}}/trends', [YearController::class, 'trends']);
 
         $g->group('', function (Group $a) use ($ym, $id): void {
             $a->get("/months/$ym/estimates", [MonthController::class, 'estimates']);

@@ -1,7 +1,7 @@
 {% extends 'base.twig' %}
 {% block title %}{{ year }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{{ t('year.title') }}</h1><nav class="month-nav" aria-label="{{ t('year.change') }}"><a href="/years/{{ year - 1 }}" aria-label="{{ t('year.previous') }}"><span aria-hidden="true">‹</span></a><strong>{{ year }}</strong><a href="/years/{{ year + 1 }}" aria-label="{{ t('year.next') }}"><span aria-hidden="true">›</span></a></nav></div>
+{{ include('_year_head.twig', {view: 'summary', suffix: ''}) }}
 {% if not months %}<section class="card"><p>{{ t('year.empty', {year: year}) }}</p></section>{% else %}
 <section class="card">{{ include('_chart.twig', {c: chart, title: t('year.chart')}) }}</section>
 <section class="card"><h2>{{ t('year.by_group') }}</h2><p class="note below">{{ t('year.rounded') }}</p><div class="scroll-x" tabindex="0" role="region" aria-label="{{ t('year.by_group') }}"><table class="sticky-first"><caption class="visually-hidden">{{ t('year.by_group') }}</caption>

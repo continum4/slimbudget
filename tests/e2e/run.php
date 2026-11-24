@@ -65,10 +65,10 @@ $check('signs in', $admin->path === "/months/$ym", $admin->path);
 
 $bill = $id('SELECT MIN(id) FROM bills');
 $groupBill = $id('SELECT MIN(id) FROM bills WHERE group_id IS NOT NULL');
-foreach (["/months/$ym", '/months/2031-01', "/months/$ym/expenses", "/months/$ym/expenses?q=a&person=1&category=x", "/months/$ym/cards", "/months/$ym/bills", "/months/$ym/installments", "/months/$ym/estimates", '/years/' . substr($ym, 0, 4), '/years/2031', '/review', '/profile', '/users', '/users/1', '/settings', '/catalogs/groups', '/catalogs/categories', '/catalogs/people', '/catalogs/cards', '/catalogs/bills', '/catalogs/categories/1', '/catalogs/bills/1', '/expenses/1', '/installments/1', "/bills/$bill", "/bills/$groupBill"] as $path) {
+foreach (["/months/$ym", '/months/2031-01', "/months/$ym/expenses", "/months/$ym/expenses?q=a&person=1&category=x", "/months/$ym/cards", "/months/$ym/bills", "/months/$ym/installments", "/months/$ym/estimates", '/years/' . substr($ym, 0, 4), '/years/2031', '/years/' . substr($ym, 0, 4) . '/trends', '/years/' . substr($ym, 0, 4) . '/trends?fixed=0', '/years/2031/trends', '/review', '/profile', '/users', '/users/1', '/settings', '/catalogs/groups', '/catalogs/categories', '/catalogs/people', '/catalogs/cards', '/catalogs/bills', '/catalogs/categories/1', '/catalogs/bills/1', '/expenses/1', '/installments/1', "/bills/$bill", "/bills/$groupBill"] as $path) {
     $admin->get($path);
     $check("GET $path", $admin->status === 200 && !preg_match('/(Warning|Deprecated|Notice):/', $admin->body), [$admin->status, mb_substr(trim(strip_tags($admin->body)), -300)]);
-    $check("no raw keys in $path", !preg_match('/>\s*(app|nav|fields|status|modes|login|profile|month|incomes|estimates|expenses|review|cards|bills|installments|year|catalogs|users|settings|errors)\.[a-z_.]+\s*</', $admin->body, $m), $m[0] ?? '');
+    $check("no raw keys in $path", !preg_match('/>\s*(app|nav|fields|status|modes|login|profile|month|incomes|estimates|expenses|review|cards|bills|installments|year|trends|group_kinds|catalogs|users|settings|errors)\.[a-z_.]+\s*</', $admin->body, $m), $m[0] ?? '');
 }
 foreach (['/nope', '/months/2026-13', '/expenses/999999', '/catalogs/users'] as $path) {
     $check("404 $path", $admin->get($path)->status === 404);
@@ -160,6 +160,20 @@ $check('cards page shows both months', $admin->get("/months/$ym/cards")->sees('T
 $db->run("DELETE FROM expenses WHERE description='Statement test'");
 $check('totals are untouched', $budget->summary($ym)['paid'] == $totals['paid'] && $budget->summary($ym)['balance'] == $totals['balance']);
 
+// Trends
+$year = substr($ym, 0, 4);
+$spent = static fn (string $kinds): float => (float) $db->value("SELECT COALESCE(SUM(x.amount),0) FROM expenses x JOIN months m ON m.id=x.month_id JOIN categories c ON c.id=x.category_id JOIN category_groups g ON g.id=c.group_id WHERE m.ym BETWEEN ? AND ? AND g.kind IN ($kinds)", ["$year-01", $ym]);
+$trends = new App\Services\Trends($db);
+$check('trends leave savings out', abs($trends->year((int) $year, true)['total'] - $spent("'variable','fixed'")) < 0.005);
+$check('trends without fixed', abs($trends->year((int) $year, false)['total'] - $spent("'variable'")) < 0.005 && $spent("'fixed'") > 0);
+$check('trends mark the month in progress', $trends->year((int) $year, true)['in_progress'] === $ym && str_contains($admin->get("/years/$year/trends")->body, 'class="s1 partial"'));
+$food = $id("SELECT id FROM category_groups WHERE name='Food'");
+$admin->get("/catalogs/groups/$food");
+$check('group kind saved', $admin->post("/catalogs/groups/$food", ['name' => 'Food', 'kind' => 'savings', 'active' => 1])->sees('Changes saved.') && !in_array('Food', array_column($trends->year((int) $year, true)['groups'], 'name'), true));
+$check('bad group kind', $admin->get("/catalogs/groups/$food")->post("/catalogs/groups/$food", ['name' => 'Food', 'kind' => 'nope', 'active' => 1])->status === 200 && $db->value('SELECT kind FROM category_groups WHERE id=?', [$food]) === 'savings');
+$admin->get("/catalogs/groups/$food")->post("/catalogs/groups/$food", ['name' => 'Food', 'kind' => 'variable', 'active' => 1]);
+$check('kinds do not change the budget', $budget->summary($ym)['paid'] == $totals['paid']);
+
 // Catalogs and users
 $admin->get('/catalogs/categories');
 $check('category added', $admin->post('/catalogs/categories', ['group_id' => 1, 'name' => 'Brand new', 'mode' => 'fixed'])->sees('Added: Brand new.'));
@@ -199,6 +213,7 @@ $member->get('/login')->post('/login', ['username' => 'member', 'password' => 's
 foreach (['/users', '/settings', '/catalogs/groups', "/months/$ym/estimates"] as $path) {
     $check("member 403 $path", $member->get($path)->status === 403);
 }
+$check('member sees trends', $member->get("/years/$year/trends")->status === 200);
 $check('member cannot change statement dates', $member->post('/cards/1/cycles', ['closing_day' => '9'])->status === 403);
 $check('member POST 403', $member->post('/catalogs/groups', ['name' => 'X'])->status === 403);
 $check('member records expenses as themselves', (bool) preg_match('/required checked> Riley/', $member->get("/months/$ym/expenses")->body));

@@ -13,7 +13,7 @@ use Slim\Exception\HttpNotFoundException;
 final class CatalogController extends Controller
 {
     private const CATALOGS = [
-        'groups' => ['table' => 'category_groups', 'fields' => ['name' => ['text', 60]]],
+        'groups' => ['table' => 'category_groups', 'fields' => ['name' => ['text', 60], 'kind' => ['option', ['variable', 'fixed', 'savings']]]],
         'categories' => ['table' => 'categories', 'fields' => ['group_id' => ['ref', 'category_groups'], 'name' => ['text', 100], 'mode' => ['option', MonthController::MODES]]],
         'people' => ['table' => 'people', 'fields' => ['name' => ['text', 60], 'spending_is_income' => ['checkbox', null]]],
         'cards' => ['table' => 'cards', 'fields' => ['name' => ['text', 80], 'alias' => ['text?', 40], 'category_id' => ['ref?', 'categories']]],

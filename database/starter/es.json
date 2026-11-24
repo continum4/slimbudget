@@ -1,4 +1,5 @@
 {
+  "_kinds": {"Ahorro": "savings", "Deuda": "fixed", "Vivienda": "fixed"},
   "Ahorro": { "Fondo de emergencias": "fixed", "Inversiones": "fixed" },
   "Comida": { "A domicilio": "fixed", "Café": "auto", "Restaurantes": "auto", "Supermercado": "fixed" },
   "Deuda": { "Tarjeta de crédito": "installments" },

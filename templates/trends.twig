@@ -1,0 +1,38 @@
+{% extends 'base.twig' %}
+{% block title %}{{ t('trends.title') }} {{ year }}{% endblock %}
+{% macro change(value) %}{% if value is not null %}{% set n = value|round %}{% set level = n >= 10 ? 'warn' : (n <= -10 ? 'good' : 'neutral') %}<span class="pill {{ level }}"><span aria-hidden="true">{{ n > 0 ? '▲' : (n < 0 ? '▼' : '=') }}</span> {{ t(n > 0 ? 'trends.above' : (n < 0 ? 'trends.below' : 'trends.same'), {percent: n|abs}) }}</span>{% endif %}{% endmacro %}
+{% macro changes(list) %}
+<ul class="deltas">{% for c in list %}{% set now = c.now|round %}{% set before = c.average|round %}<li><span class="name">{{ c.category }} <small>{{ c.group }}</small></span><strong>{{ now > before ? '+' }}{{ (now - before)|money_round }}</strong><span class="note">{{ t('trends.from_to', {before: before|money_round, now: now|money_round}) }}</span></li>{% else %}<li>{{ t('trends.no_changes') }}</li>{% endfor %}</ul>
+{% endmacro %}
+{% block content %}
+{{ include('_year_head.twig', {view: 'trends', suffix: '/trends' ~ (include_fixed ? '' : '?fixed=0')}) }}
+{% if not d.months %}<section class="card"><p>{{ t('year.empty', {year: year}) }}</p></section>{% else %}
+<div class="page-head filter-head"><p class="note">{{ t('trends.help') }}</p>
+  <nav class="segmented" aria-label="{{ t('trends.filter') }}"><a href="/years/{{ year }}/trends"{% if include_fixed %} aria-current="true"{% endif %}>{{ t('trends.with_fixed') }}</a><a href="/years/{{ year }}/trends?fixed=0"{% if not include_fixed %} aria-current="true"{% endif %}>{{ t('trends.without_fixed') }}</a></nav></div>
+<dl class="kpis">
+  <div><dt>{{ t('trends.year_total') }}</dt><dd>{{ d.total|money_round }}</dd></div>
+  {% if d.typical is not null %}<div><dt>{{ t('trends.typical_month') }}</dt><dd>{{ d.typical|money_round }}</dd></div>{% endif %}
+  {% if d.current %}<div><dt>{{ t('trends.so_far', {month: d.in_progress|month}) }}</dt><dd>{{ d.current.amount|money_round }}</dd>{% if d.current.typical_by_now is not null %}<dd class="sub">{{ t('trends.by_now', {amount: d.current.typical_by_now|money_round, day: d.current.day}) }}</dd>{% endif %}</div>{% endif %}
+</dl>
+<section class="card">{{ include('_chart.twig', {c: chart, title: t('trends.per_month')}) }}
+  {% if d.in_progress %}<p class="note">{{ t('trends.partial_note', {month: d.in_progress|month}) }}</p>{% endif %}
+  <details class="more"><summary>{{ t('installments.as_table') }}</summary><table><caption class="visually-hidden">{{ t('trends.per_month') }}</caption><thead><tr><th scope="col">{{ t('installments.month') }}</th><th scope="col" class="num">{{ t('year.spending') }}</th></tr></thead><tbody>{% for m in d.months %}<tr><th scope="row">{{ m|month }}</th><td class="num">{{ d.totals[loop.index0]|money }}</td></tr>{% endfor %}</tbody></table></details></section>
+<section class="card"><h2>{{ t('trends.by_group') }}</h2><p class="note">{{ t('trends.by_group_help') }}</p>
+  <ul class="minis">{% for g in d.groups %}{% set c = minis[loop.index0] %}<li>
+    <div class="mini-head"><h3>{{ g.name }}</h3>{{ _self.change(g.change) }}</div>
+    <svg viewBox="0 0 {{ c.width }} {{ c.height + 14 }}" role="group" aria-label="{{ g.name }}">
+      <line class="axis" x1="0" x2="{{ c.width }}" y1="{{ c.height }}" y2="{{ c.height }}"/>
+      {% for b in c.bars %}<text x="{{ b.center }}" y="{{ c.height + 12 }}" text-anchor="middle" aria-hidden="true">{{ labels[loop.index0]|first|upper }}</text>{% endfor %}
+      {% for b in c.bars %}<g class="mark" role="img" tabindex="0" data-value="{{ b.value|money }}" data-series="{{ g.name }}" data-label="{{ labels[loop.index0] }}" aria-label="{{ labels[loop.index0] }}: {{ b.value|money }}"><path class="s1{% if b.partial %} partial{% endif %}" d="{{ b.d }}"/><rect class="hit" x="{{ b.hit_x }}" y="0" width="{{ b.hit_width }}" height="{{ c.height }}"/></g>{% endfor %}
+      {% if c.reference is not null %}<line class="reference" x1="0" x2="{{ c.width }}" y1="{{ c.reference }}" y2="{{ c.reference }}"/>{% endif %}
+    </svg>
+    <p class="mini-foot"><span>{{ t('trends.typical', {amount: g.typical is not null ? g.typical|money_round : '—'}) }}</span><span>{{ t('trends.year_sum', {amount: g.total|money_round}) }}</span></p>
+  </li>{% endfor %}</ul></section>
+{% if d.changes %}<section class="card"><h2>{{ t('trends.what_changed', {month: d.changes.month|month}) }}</h2><p class="note">{{ t('trends.what_changed_help', {months: d.changes.before|map(m => m|month_short)|join(', ')}) }}</p>
+  <div class="two-up spaced"><div><h3>{{ t('trends.went_up') }}</h3>{{ _self.changes(d.changes.up) }}</div><div><h3>{{ t('trends.went_down') }}</h3>{{ _self.changes(d.changes.down) }}</div></div></section>{% endif %}
+<section class="card"><h2>{{ t('trends.where') }}</h2>
+  <div class="table-box"><table class="stackable ranked"><caption class="visually-hidden">{{ t('trends.where') }}</caption><thead><tr><th scope="col">{{ t('fields.category') }}</th><th scope="col"><span class="visually-hidden">{{ t('trends.share') }}</span></th><th scope="col" class="num">{{ t('fields.amount') }}</th><th scope="col" class="num">{{ t('trends.share') }}</th></tr></thead><tbody>
+  {% for c in d.top %}<tr><th scope="row">{{ c.category }} <small>{{ c.group }}</small></th><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="fill" width="{{ (c.amount / d.top[0].amount * 100)|round(1) }}" height="8"/></svg></td><td data-t="{{ t('fields.amount') }}" class="num">{{ c.amount|money_round }}</td><td data-t="{{ t('trends.share') }}" class="num">{{ c.share|round(1) }}%</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endif %}
+{% endblock %}

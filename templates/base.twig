@@ -24,7 +24,7 @@
           ('/months/' ~ m): 'month', ('/months/' ~ m ~ '/expenses'): 'expenses', ('/months/' ~ m ~ '/cards'): 'cards',
           ('/months/' ~ m ~ '/bills'): 'bills', ('/months/' ~ m ~ '/installments'): 'installments', ('/years/' ~ m|slice(0, 4)): 'year'
         } %}
-        <li><a href="{{ url }}"{% if path == url %} aria-current="page"{% endif %}>{{ t('nav.' ~ key) }}</a></li>
+        <li><a href="{{ url }}"{% if path == url or (key == 'year' and path starts with '/years/') %} aria-current="page"{% endif %}>{{ t('nav.' ~ key) }}</a></li>
         {% endfor %}
         {% if me.role == 'admin' %}
         {% for url, key in {'/catalogs/categories': 'catalogs', '/users': 'users', '/settings': 'settings'} %}

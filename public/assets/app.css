@@ -141,6 +141,7 @@
 
   .kpis { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-6); margin: 0; }
   .kpis dt { color: var(--ink-2); font-size: .9375rem; } .kpis dd { margin: 0; font-size: 1.75rem; font-weight: 600; line-height: 1.2; }
+  .kpis dd.sub { color: var(--ink-2); font-size: .9375rem; font-weight: 400; }
 
   .bar { inline-size: 100%; block-size: .5rem; border-radius: 4px; overflow: clip; }
   .bar .track { fill: var(--track); } .bar .fill { fill: var(--series-1); } .bar.ref .fill { fill: var(--ref); }
@@ -219,6 +220,23 @@
   .chart text { fill: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
   .grid-line { stroke: var(--line); } .axis { stroke: var(--border); } .hit { fill: transparent; }
   .mark:is(:hover, :focus) path { opacity: .75; }
+  .partial { fill-opacity: .3; stroke: var(--series-1); stroke-width: 1.5; }
+  .reference { stroke: var(--ink-2); stroke-width: 1.5; pointer-events: none; }
+  .chart text.reference-label { fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+  .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); overflow: clip; }
+  .filter-head { justify-content: space-between; }
+  .segmented a { display: flex; align-items: center; min-block-size: 2.75rem; padding-inline: var(--space-4); color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+  .segmented a:hover { background: var(--surface-2); } .segmented a[aria-current] { background: var(--button); color: #fff; font-weight: 600; }
+  .minis { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: grid; gap: var(--space-5) var(--space-6); grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); }
+  .minis li { min-inline-size: 0; } .minis svg { display: block; inline-size: 100%; block-size: auto; overflow: visible; } .minis text { fill: var(--muted); font-size: 9px; }
+  .mini-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-1) var(--space-2); min-block-size: 2rem; margin-block-end: var(--space-2); }
+  .mini-foot { display: flex; justify-content: space-between; gap: var(--space-2); color: var(--ink-2); font-size: .875rem; margin-block-start: var(--space-1); font-variant-numeric: tabular-nums; }
+  h3 { margin: 0; font-size: 1rem; line-height: 1.3; }
+  .deltas { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+  .deltas li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--space-3); padding-block: var(--space-2); border-block-end: 1px solid var(--line); }
+  .deltas li:last-child { border: 0; } .deltas .note { grid-column: 1 / -1; margin: 0; } .deltas strong { font-variant-numeric: tabular-nums; }
+  .spaced { margin-block-start: var(--space-4); }
+  .ranked { table-layout: fixed; } .ranked thead th:nth-child(2) { inline-size: 35%; } .ranked thead .num { inline-size: 7rem; } .ranked td { vertical-align: middle; }
   .tooltip { position: fixed; pointer-events: none; background: var(--ink); color: var(--plane); padding: .35rem .7rem; border-radius: var(--radius-2); display: grid; font-size: .875rem; z-index: 20; }
   .tooltip[hidden] { display: none; }
 
@@ -299,6 +317,7 @@
     .bar { forced-color-adjust: none; } .bar .track { fill: Canvas; stroke: CanvasText; } .bar .fill { fill: Highlight; }
     .chart .s1, .legend .s1 { fill: Highlight; } .chart .s2, .legend .s2 { fill: GrayText; }
   }
+  @media (forced-colors: active) { .segmented a[aria-current] { outline: 2px solid Highlight; outline-offset: -2px; } .reference { stroke: CanvasText; } }
   @media (prefers-contrast: more) { :root { --line: var(--border); --muted: var(--ink-2); } }
   @media print { .topbar, form, .month-nav a, .more { display: none; } body { background: none; } .card { break-inside: avoid; } }
 }

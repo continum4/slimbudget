@@ -4,7 +4,7 @@
   {% if type == 'checkbox' %}<label><input type="checkbox" name="{{ field }}" value="1"{% if value %} checked{% endif %}> {{ label }}</label>
   {% else %}<label for="{{ field }}">{{ type ends with '?' ? t('app.optional', {label: label}) : label }}</label>
     {% if type starts with 'ref' %}<select id="{{ field }}" name="{{ field }}"{% if type == 'ref' %} required{% endif %}><option value="">{{ t(type == 'ref' ? 'app.choose' : 'app.none') }}</option>{% for o in references[field] %}<option value="{{ o.id }}"{% if o.id == value %} selected{% endif %}>{{ o.name }}</option>{% endfor %}</select>
-    {% elseif type == 'option' %}<select id="{{ field }}" name="{{ field }}">{% for o in d[1] %}<option value="{{ o }}"{% if o == value %} selected{% endif %}>{{ t('modes.' ~ o) }}</option>{% endfor %}</select>
+    {% elseif type == 'option' %}<select id="{{ field }}" name="{{ field }}">{% for o in d[1] %}<option value="{{ o }}"{% if o == value %} selected{% endif %}>{{ t((field == 'kind' ? 'group_kinds.' : 'modes.') ~ o) }}</option>{% endfor %}</select>
     {% elseif type == 'integer' %}<input type="number" id="{{ field }}" name="{{ field }}" min="{{ d[1][0] }}" max="{{ d[1][1] }}" value="{{ value }}" required>
     {% elseif type == 'amount' %}<input id="{{ field }}" name="{{ field }}" inputmode="decimal" pattern="{{ amount_pattern() }}" data-example="{{ amount_example() }}" value="{{ old(field, (row[field] ?? '')|amount) }}" required>
     {% else %}<input id="{{ field }}" name="{{ field }}" maxlength="{{ d[1] }}" autocomplete="off" value="{{ value }}"{% if type == 'text' %} required{% endif %}>{% endif %}

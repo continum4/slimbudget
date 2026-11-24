@@ -1,4 +1,5 @@
 {
+  "_kinds": {"Debt": "fixed", "Housing": "fixed", "Savings": "savings"},
   "Debt": { "Credit card": "installments" },
   "Food": { "Coffee": "auto", "Delivery": "fixed", "Eating out": "auto", "Groceries": "fixed" },
   "Health": { "Doctor": "auto", "Pharmacy": "auto" },

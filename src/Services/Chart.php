@@ -10,14 +10,18 @@ final class Chart
     private const LEFT = 56;
     private const TOP = 12;
 
-    /** @param array<string,list<float>> $series */
-    public static function columns(array $labels, array $series): array
+    /**
+     * @param array<string,list<float>> $series
+     * @param ?array{value:float,label:string} $reference horizontal line
+     * @param ?int $partial index of the month in progress
+     */
+    public static function columns(array $labels, array $series, ?array $reference = null, ?int $partial = null): array
     {
         $n = max(1, count($labels));
         $count = count($series);
         $band = max(56, min(96, intdiv(1060, $n)));
         $width = min(24, (int) (($band - 12 - 2 * ($count - 1)) / $count));
-        $max = max([1.0, ...array_merge(...array_values($series) ?: [[]])]);
+        $max = max([1.0, $reference['value'] ?? 0.0, ...array_merge(...array_values($series) ?: [[]])]);
         $step = self::step($max);
         $limit = ceil($max / $step) * $step;
         $base = self::TOP + self::HEIGHT;
@@ -31,8 +35,8 @@ final class Chart
                 $top = $y((float) $value);
                 $radius = min(4, $base - $top);
                 $bars[] = [
-                    'series' => $s + 1, 'name' => $name, 'label' => $labels[$i], 'value' => $value,
-                    'd' => sprintf('M%1$s %2$sV%3$sq0 -%4$s %4$s -%4$sh%5$sq%4$s 0 %4$s %4$sV%2$sz', $x, $base, $top + $radius, $radius, $width - 2 * $radius),
+                    'series' => $s + 1, 'name' => $name, 'label' => $labels[$i], 'value' => $value, 'partial' => $i === $partial,
+                    'd' => self::bar($x, $base, $top, $width, $radius),
                     'hit_x' => $x - 2, 'hit_width' => $width + 4,
                 ];
             }
@@ -45,8 +49,34 @@ final class Chart
         return [
             'width' => self::LEFT + $n * $band + 8, 'height' => $base + 28, 'left' => self::LEFT, 'top' => self::TOP, 'plot' => self::HEIGHT, 'base' => $base,
             'series' => array_keys($series), 'bars' => $bars, 'ticks' => $ticks,
+            'reference' => $reference ? ['y' => $y($reference['value']), 'label' => $reference['label']] : null,
             'axis' => array_map(static fn (int $i): array => ['x' => self::LEFT + $i * $band + $band / 2, 'text' => $labels[$i]], array_keys($labels)),
         ];
+    }
+
+    /** One small column chart on its own scale. @param list<float> $values */
+    public static function mini(array $values, ?float $reference, ?int $partial): array
+    {
+        $height = 64;
+        $slot = 24; // room for twelve months, so every chart has the same scale in x
+        $width = 16;
+        $max = max([1.0, $reference ?? 0.0, ...$values]);
+        $y = static fn (float $value): float => round($height - $value / $max * ($height - 4), 1);
+        $bars = [];
+        foreach ($values as $i => $value) {
+            $top = $y((float) $value);
+            $bars[] = [
+                'value' => $value, 'partial' => $i === $partial, 'hit_x' => $i * $slot, 'hit_width' => $slot, 'center' => $i * $slot + $slot / 2,
+                'd' => self::bar($i * $slot + ($slot - $width) / 2, $height, $top, $width, min(3, $height - $top)),
+            ];
+        }
+        return ['width' => max(12, count($values)) * $slot, 'height' => $height, 'bars' => $bars, 'reference' => $reference === null ? null : $y($reference)];
+    }
+
+    /** Column with a rounded top, square at the baseline. */
+    private static function bar(float $x, float $base, float $top, float $width, float $radius): string
+    {
+        return sprintf('M%1$s %2$sV%3$sq0 -%4$s %4$s -%4$sh%5$sq%4$s 0 %4$s %4$sV%2$sz', $x, $base, $top + $radius, $radius, $width - 2 * $radius);
     }
 
     private static function tick(float $value, float $limit): string
