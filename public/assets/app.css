@@ -260,6 +260,11 @@
   .form-list { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr); align-items: start; }
   @media (width >= 52rem) { .form-list { grid-template-columns: 22rem minmax(0, 1fr); } .form-list > :first-child { position: sticky; inset-block-start: var(--space-4); } }
   .form-list .primary { inline-size: 100%; }
+  /* Percentages keep the amount columns aligned across the three tables */
+  .statements, .by-card { table-layout: fixed; }
+  .statements thead th, .by-card thead th { white-space: normal; }
+  .statements thead .num, .by-card thead .num { inline-size: 15%; }
+  .statements thead th:nth-child(2) { inline-size: 22%; } .statements thead th:nth-child(3) { inline-size: 11%; }
   .estimates .col-mode { inline-size: 13rem; } .estimates .col-amount { inline-size: 11rem; } .estimates .col-paid { inline-size: 9rem; }
   .estimates :is(th, td) { vertical-align: middle; }
   .estimates .group-row > th { font-weight: 600; padding: var(--space-3) var(--space-3); background: var(--surface-2); border-block-end: 1px solid var(--line); }

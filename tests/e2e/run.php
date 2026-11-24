@@ -127,6 +127,30 @@ $admin->post("/months/$ym/incomes", ['kind' => 'other', 'description' => 'Sale',
 $check('income added', abs((new App\Services\Budget($db))->summary($ym)['total_income'] - $summary['total_income'] - 100) < 0.005);
 $admin->post('/incomes/' . $id("SELECT id FROM incomes WHERE description='Sale'") . '/delete');
 
+// Card statements: informative, never part of the totals
+$budget = new App\Services\Budget($db);
+$previous = Month::add($ym, -1);
+$green = $id("SELECT id FROM cards WHERE name='Green Card'");
+$statement = static fn (string $month, int $card): array => array_column($budget->cardStatements($month), null, 'id')[$card] ?? ['regular' => 0.0, 'installments' => 0.0, 'total' => 0.0];
+$spent = (float) $db->value('SELECT COALESCE(SUM(amount),0) FROM expenses WHERE card_id=? AND spent_on LIKE ?', [$green, "$previous-%"]);
+$check('calendar statement is last month\'s purchases', $spent > 0 && abs($statement($ym, $green)['regular'] - $spent) < 0.005);
+$plans = (float) $db->value('SELECT COALESCE(SUM(total_amount/installments),0) FROM installment_plans WHERE card_id=? AND start_month<=? AND end_month>=?', [$green, $ym, $ym]);
+$check('plus this month\'s installments', abs($statement($ym, $green)['total'] - $spent - $plans) < 0.011);
+$totals = $budget->summary($ym);
+$next1 = $statement($next, $green)['regular'];
+$db->run('INSERT INTO expenses (month_id, spent_on, description, category_id, person_id, amount, card_id) VALUES (?,?,?,?,1,100,?)', [$id('SELECT id FROM months WHERE ym=?', [$ym]), Month::date($ym, 2), 'Statement test', $expense['category_id'], $green]);
+$check('a card purchase counts once as spending', abs($budget->summary($ym)['paid'] - $totals['paid'] - 100) < 0.005);
+$check('and is charged next month', abs($statement($next, $green)['regular'] - $next1 - 100) < 0.005 && abs($statement($ym, $green)['regular'] - $spent) < 0.005);
+$admin->get("/catalogs/cards/$green")->post("/catalogs/cards/$green", ['name' => 'Green Card', 'alias' => 'Green', 'category_id' => $db->value('SELECT category_id FROM cards WHERE id=?', [$green]), 'closing_day' => '1', 'due_day' => '20', 'active' => 1]);
+$check('closing day moves the purchase to the next statement', $admin->sees('Changes saved.') && $budget->cardStatements($ym) !== [] && abs($statement($next, $green)['regular'] - (float) $db->value('SELECT SUM(amount) FROM expenses WHERE card_id=? AND spent_on BETWEEN ? AND ?', [$green, Month::date($ym, 2), "$next-01"])) < 0.005);
+$check('bad closing day', $admin->get("/catalogs/cards/$green")->post("/catalogs/cards/$green", ['name' => 'Green Card', 'closing_day' => '40', 'active' => 1])->sees('Closing day must be between 1 and 31.'));
+$admin->get("/catalogs/cards/$green")->post("/catalogs/cards/$green", ['name' => 'Green Card', 'alias' => 'Green', 'category_id' => $db->value('SELECT category_id FROM cards WHERE id=?', [$green]), 'closing_day' => '', 'due_day' => '', 'active' => 1]);
+$check('empty closing day goes back to the calendar', $db->value('SELECT closing_day FROM cards WHERE id=?', [$green]) === null);
+$check('month page shows it', $admin->get("/months/$ym")->sees('Card payments') && $admin->sees('does not add to spending'));
+$check('cards page shows both months', $admin->get("/months/$ym/cards")->sees('To pay in') && $admin->sees('Building up for'));
+$db->run("DELETE FROM expenses WHERE description='Statement test'");
+$check('totals are untouched', $budget->summary($ym)['paid'] == $totals['paid'] && $budget->summary($ym)['balance'] == $totals['balance']);
+
 // Catalogs and users
 $admin->get('/catalogs/categories');
 $check('category added', $admin->post('/catalogs/categories', ['group_id' => 1, 'name' => 'Brand new', 'mode' => 'fixed'])->sees('Added: Brand new.'));

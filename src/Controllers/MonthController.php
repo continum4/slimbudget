@@ -26,6 +26,8 @@ final class MonthController extends Controller
             'ym' => $args['ym'],
             's' => $this->budget->summary($args['ym']),
             'kinds' => self::KINDS,
+            'statements' => $this->budget->cardStatements($args['ym']),
+            'next_total' => array_sum(array_column($this->budget->cardStatements(Month::add($args['ym'], 1)), 'total')),
             'due' => array_values(array_filter($bills, static fn (array $b): bool => in_array($b['status'], ['pending', 'partial', 'overdue'], true))),
         ]);
     }

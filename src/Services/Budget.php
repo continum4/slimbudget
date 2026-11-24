@@ -180,6 +180,51 @@ final class Budget
         );
     }
 
+    /**
+     * Purchase dates included in the statement paid in $ym.
+     * Without a closing day, the statement is the previous calendar month. With one, it closes on that day
+     * (included) and is paid the next month, or the same month when the due day comes after the closing day.
+     *
+     * @return array{0:string,1:string}
+     */
+    public static function statementPeriod(string $ym, ?int $closingDay, ?int $dueDay): array
+    {
+        if (!$closingDay) {
+            $previous = Month::add($ym, -1);
+            return ["$previous-01", Month::date($previous, 31)];
+        }
+        $closing = $dueDay && $dueDay > $closingDay ? $ym : Month::add($ym, -1);
+        $from = new \DateTimeImmutable(Month::date(Month::add($closing, -1), $closingDay));
+        return [$from->modify('+1 day')->format('Y-m-d'), Month::date($closing, $closingDay)];
+    }
+
+    /**
+     * What each card charges in $ym: regular purchases of its statement plus the installments of the month.
+     * Informative only: purchases already count as expenses, and installments as debt.
+     */
+    public function cardStatements(string $ym): array
+    {
+        $list = [];
+        foreach ($this->db->all('SELECT * FROM cards ORDER BY name') as $card) {
+            $dueDay = $card['due_day'] === null ? null : (int) $card['due_day'];
+            [$from, $to] = self::statementPeriod($ym, $card['closing_day'] === null ? null : (int) $card['closing_day'], $dueDay);
+            $regular = round((float) $this->db->value('SELECT COALESCE(SUM(amount),0) FROM expenses WHERE card_id=? AND spent_on BETWEEN ? AND ?', [$card['id'], $from, $to]), 2);
+            $installments = round((float) $this->db->value(
+                'SELECT COALESCE(SUM(total_amount/installments),0) FROM installment_plans WHERE card_id=? AND start_month<=? AND end_month>=?',
+                [$card['id'], $ym, $ym]
+            ), 2);
+            if ($regular == 0 && $installments == 0) {
+                continue;
+            }
+            $list[] = [
+                'id' => $card['id'], 'name' => $card['name'], 'from' => $from, 'to' => $to, 'due_on' => $dueDay ? Month::date($ym, $dueDay) : null,
+                'regular' => $regular, 'installments' => $installments, 'total' => round($regular + $installments, 2),
+                'still_open' => $to >= date('Y-m-d'),
+            ];
+        }
+        return $list;
+    }
+
     /** Sum of active installments per month, starting at $ym. */
     public function projection(string $ym, int $months = 18): array
     {

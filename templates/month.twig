@@ -49,6 +49,13 @@
         {% for b in due %}<tr><th scope="row"><a href="/bills/{{ b.id }}">{{ b.name }}</a>{% if b.status == 'overdue' %} <span class="pill critical"><span aria-hidden="true">▲</span> {{ t('bills.statuses.overdue') }}</span>{% endif %}</th><td class="date">{{ b.due_on|day }}</td><td class="num">{{ b.remaining|money }}</td></tr>{% endfor %}
       </tbody><tfoot><tr><th scope="row" colspan="2">{{ t('app.total') }}</th><td class="num">{{ due|reduce((a, b) => a + b.remaining, 0)|money }}</td></tr></tfoot></table>{% else %}<p>{{ t('bills.all_paid') }}</p>{% endif %}
     </section>
+    {% if statements or next_total %}<section class="card"><h2>{{ t('statements.title') }}</h2>
+      {% if statements %}<table><caption class="visually-hidden">{{ t('statements.to_pay_in', {month: ym|month}) }}</caption><thead><tr><th scope="col">{{ t('fields.card') }}</th><th scope="col" class="num">{{ t('statements.to_pay') }}</th></tr></thead><tbody>
+        {% for c in statements %}<tr><th scope="row">{{ c.name }}{% if c.due_on %} <small>{{ t('bills.due_on', {date: c.due_on|day}) }}</small>{% endif %}</th><td class="num">{{ c.total|money }}</td></tr>{% endfor %}
+      </tbody><tfoot><tr><th scope="row">{{ t('app.total') }}</th><td class="num">{{ statements|reduce((a, c) => a + c.total, 0)|money }}</td></tr></tfoot></table>{% endif %}
+      <p class="note">{{ t('statements.next_so_far', {month: month_add(ym, 1)|month, amount: next_total|money}) }} <a href="/months/{{ ym }}/cards">{{ t('statements.details') }}</a></p>
+      <p class="note"><small>{{ t('statements.not_spending') }}</small></p>
+    </section>{% endif %}
     <section class="card" id="incomes"><h2>{{ t('incomes.title') }}</h2>
       <table><caption class="visually-hidden">{{ t('incomes.title') }}</caption><tbody>
         {% for i in s.incomes %}{% set label = i.description ?: t('incomes.kinds.' ~ i.kind) %}<tr><th scope="row">{{ label }}</th><td class="num">{{ i.amount|money }}</td>

@@ -40,7 +40,7 @@ function seedDemo(Database $db): void
     $groups = array_column($db->all('SELECT name, id FROM category_groups'), 'id', 'name');
     $sam = $db->insert('people', ['name' => 'Sam']);
     $riley = $db->insert('people', ['name' => 'Riley', 'spending_is_income' => 1]);
-    $blue = $db->insert('cards', ['name' => 'Blue Bank', 'alias' => 'Blue', 'category_id' => $category['Credit card']]);
+    $blue = $db->insert('cards', ['name' => 'Blue Bank', 'alias' => 'Blue', 'category_id' => $category['Credit card'], 'closing_day' => 20, 'due_day' => 10]);
     $green = $db->insert('cards', ['name' => 'Green Card', 'alias' => 'Green', 'category_id' => $category['Credit card']]);
     foreach ([['demo', 'Demo Admin', 'admin', $sam], ['member', 'Demo Member', 'member', $riley]] as [$username, $name, $role, $person]) {
         $db->insert('users', ['username' => $username, 'name' => $name, 'role' => $role, 'person_id' => $person, 'must_change_password' => 0, 'password_hash' => password_hash('slimbudget-demo', PASSWORD_DEFAULT)]);

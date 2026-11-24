@@ -52,8 +52,11 @@ final class Input
         return Month::isValid($value) ? $value : $this->fail('month', $label);
     }
 
-    public function integer(string $key, string $label, int $min, int $max): int
+    public function integer(string $key, string $label, int $min, int $max, bool $required = true): ?int
     {
+        if (!$required && $this->raw($key) === '') {
+            return null;
+        }
         $value = filter_var($this->raw($key), FILTER_VALIDATE_INT, ['options' => ['min_range' => $min, 'max_range' => $max]]);
         return $value === false ? $this->fail('range', $label, ['min' => $min, 'max' => $max]) : $value;
     }

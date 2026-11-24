@@ -3,8 +3,16 @@
 {% block title %}{{ t('cards.title') }} {{ ym|month }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{{ t('cards.title') }}</h1>{{ ui.month_nav(ym, '/cards') }}</div>
-<section class="card"><h2>{{ t('cards.by_card') }}</h2>
-  <div class="table-box"><table class="stackable"><caption class="visually-hidden">{{ t('cards.by_card') }}</caption><thead><tr><th scope="col">{{ t('fields.card') }}</th><th scope="col" class="num">{{ t('cards.regular') }}</th><th scope="col" class="num">{{ t('cards.installments') }}</th><th scope="col" class="num">{{ t('app.total') }}</th></tr></thead><tbody>
+<p class="note">{{ t('statements.not_spending') }}</p>
+{% for month, list in statements %}
+<section class="card"><h2>{{ t(loop.first ? 'statements.to_pay_in' : 'statements.building_for', {month: month|month}) }}</h2>
+  {% if list %}<div class="table-box"><table class="stackable statements"><caption class="visually-hidden">{{ t('statements.to_pay_in', {month: month|month}) }}</caption><thead><tr><th scope="col">{{ t('fields.card') }}</th><th scope="col">{{ t('statements.period') }}</th><th scope="col">{{ t('bills.due') }}</th><th scope="col" class="num">{{ t('statements.regular') }}</th><th scope="col" class="num">{{ t('statements.installments') }}</th><th scope="col" class="num">{{ t('statements.to_pay') }}</th></tr></thead><tbody>
+  {% for c in list %}<tr><th scope="row">{{ c.name }}</th><td data-t="{{ t('statements.period') }}"><span>{{ c.from|day }} – {{ c.to|day }}{% if c.still_open %} <span class="pill neutral">{{ t('statements.open') }}</span>{% endif %}</span></td><td data-t="{{ t('bills.due') }}">{{ c.due_on|day }}</td><td data-t="{{ t('statements.regular') }}" class="num">{{ c.regular|money }}</td><td data-t="{{ t('statements.installments') }}" class="num">{{ c.installments|money }}</td><td data-t="{{ t('statements.to_pay') }}" class="num"><strong>{{ c.total|money }}</strong></td></tr>{% endfor %}
+  </tbody><tfoot><tr><th scope="row">{{ t('app.total') }}</th><td></td><td></td><td data-t="{{ t('statements.regular') }}" class="num">{{ list|reduce((a, c) => a + c.regular, 0)|money }}</td><td data-t="{{ t('statements.installments') }}" class="num">{{ list|reduce((a, c) => a + c.installments, 0)|money }}</td><td data-t="{{ t('statements.to_pay') }}" class="num">{{ list|reduce((a, c) => a + c.total, 0)|money }}</td></tr></tfoot></table></div>
+  {% else %}<p>{{ t('statements.none') }}</p>{% endif %}</section>
+{% endfor %}
+<section class="card"><h2>{{ t('cards.by_card', {month: ym|month}) }}</h2>
+  <div class="table-box"><table class="stackable by-card"><caption class="visually-hidden">{{ t('cards.by_card', {month: ym|month}) }}</caption><thead><tr><th scope="col">{{ t('fields.card') }}</th><th scope="col" class="num">{{ t('cards.regular') }}</th><th scope="col" class="num">{{ t('cards.installments') }}</th><th scope="col" class="num">{{ t('app.total') }}</th></tr></thead><tbody>
   {% for c in by_card %}<tr><th scope="row">{{ c.name }}</th><td data-t="{{ t('cards.regular') }}" class="num">{{ c.regular|money }}</td><td data-t="{{ t('cards.installments') }}" class="num">{{ c.installments|money }}</td><td data-t="{{ t('app.total') }}" class="num">{{ (c.regular + c.installments)|money }}</td></tr>{% else %}<tr><td colspan="4">{{ t('cards.none') }}</td></tr>{% endfor %}
   </tbody><tfoot><tr><th scope="row">{{ t('app.total') }}</th><td></td><td></td><td data-t="{{ t('app.total') }}" class="num">{{ total|money }}</td></tr></tfoot></table></div></section>
 <section class="card"><h2>{{ t('cards.count', {count: rows|length}) }}</h2>

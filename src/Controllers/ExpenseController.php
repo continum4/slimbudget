@@ -108,6 +108,16 @@ final class ExpenseController extends Controller
         return $this->render($response, 'review.twig', ['expenses' => $this->db->all(self::SELECT . ' WHERE x.needs_review=1 ORDER BY m.ym, x.spent_on, x.id')]);
     }
 
+    /** Statements paid this month and the one building up for the next. */
+    private function statements(string $ym): array
+    {
+        $list = [];
+        foreach ([$ym, Month::add($ym, 1)] as $month) {
+            $list[$month] = $this->budget->cardStatements($month);
+        }
+        return $list;
+    }
+
     /** Card purchases of the month: expenses paid by card plus installment plans bought that month. */
     public function cards(Request $request, Response $response, array $args): Response
     {
@@ -128,6 +138,6 @@ final class ExpenseController extends Controller
             $byCard[$row['card']][$row['installments'] ? 'installments' : 'regular'] += (float) $row['amount'];
         }
         ksort($byCard);
-        return $this->render($response, 'cards.twig', ['ym' => $args['ym'], 'rows' => $rows, 'by_card' => array_values($byCard), 'total' => array_sum(array_column($rows, 'amount'))]);
+        return $this->render($response, 'cards.twig', ['ym' => $args['ym'], 'statements' => $this->statements($args['ym']), 'rows' => $rows, 'by_card' => array_values($byCard), 'total' => array_sum(array_column($rows, 'amount'))]);
     }
 }
