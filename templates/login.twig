@@ -1,0 +1,22 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('login.title') }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <div class="login-head"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-6M10 19V6M16 19v-4M22 19v-8" transform="translate(-1)"/></svg><h1>{{ t('app.name') }}</h1></div>
+  {% if error %}<p class="notice error" role="alert"><span class="icon" aria-hidden="true">▲</span> {{ error }}</p>{% endif %}
+  <form method="post" action="/login">
+    {{ csrf() }}
+    <div class="field"><label for="username">{{ t('login.username') }}</label><input id="username" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" value="{{ old('username') }}" required{% if not old('username') %} autofocus{% endif %}></div>
+    <div class="field"><label for="password">{{ t('login.password') }}</label><input id="password" name="password" type="password" autocomplete="current-password" enterkeyhint="done" required{% if old('username') %} autofocus{% endif %}></div>
+    <button class="primary">{{ t('login.submit') }}</button>
+  </form>
+  {% if languages()|length > 1 %}
+  <form method="post" action="/language" class="language">
+    {{ csrf() }}
+    <div class="field"><label for="locale">{{ t('login.language') }}</label><select id="locale" name="locale">{{ ui.language_options(locale()) }}</select></div>
+    <button>{{ t('login.change_language') }}</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

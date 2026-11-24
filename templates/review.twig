@@ -1,0 +1,7 @@
+{% extends 'base.twig' %}
+{% block title %}{{ t('review.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('review.title') }}</h1>
+<p class="note">{{ t('review.help') }}</p>
+<section class="card">{{ include('_expense_table.twig') }}</section>
+{% endblock %}

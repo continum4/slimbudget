@@ -1,0 +1,12 @@
+{% if expenses %}
+<div class="table-box"><table class="ledger">
+  <caption class="visually-hidden">{{ t('expenses.title') }}</caption>
+  <thead><tr><th scope="col">{{ t('fields.date') }}</th><th scope="col">{{ t('fields.description') }}</th><th scope="col">{{ t('fields.category') }}</th><th scope="col">{{ t('fields.person') }}</th><th scope="col">{{ t('fields.card') }}</th><th scope="col" class="num">{{ t('fields.amount') }}</th></tr></thead>
+  <tbody>{% for x in expenses %}<tr>
+    <td class="date">{{ x.spent_on|day }}</td>
+    <th scope="row"><a href="/expenses/{{ x.id }}">{{ x.description }}</a>{% if x.needs_review %} <span class="pill warn"><span aria-hidden="true">◔</span> {{ t('expenses.review') }}</span> <small>{{ x.note }}</small>{% endif %}</th>
+    <td>{{ x.category }} <small class="group-name">{{ x.group_name }}</small></td><td>{{ x.person }}</td>
+    <td>{{ x.card }}{% if x.merchant %} <small>{{ x.merchant }}</small>{% endif %}</td><td class="num">{{ x.amount|money }}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<p>{{ t('expenses.none') }}</p>{% endif %}

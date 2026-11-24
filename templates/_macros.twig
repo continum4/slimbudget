@@ -1,0 +1,49 @@
+{% macro month_nav(ym, base) %}
+<nav class="month-nav" aria-label="{{ t('app.change_month') }}">
+  <a href="/months/{{ month_add(ym, -1) }}{{ base }}" aria-label="{{ t('app.previous_month', {month: month_add(ym, -1)|month}) }}"><span aria-hidden="true">‹</span></a>
+  <strong>{{ ym|month }}</strong>
+  <a href="/months/{{ month_add(ym, 1) }}{{ base }}" aria-label="{{ t('app.next_month', {month: month_add(ym, 1)|month}) }}"><span aria-hidden="true">›</span></a>
+</nav>
+{% endmacro %}
+
+{% macro status(s) %}<span class="pill {{ s.level }}"><span aria-hidden="true">{{ s.icon }}</span> {{ t('status.' ~ s.key, {percent: s.percent ?? ''}) }}</span>{% endmacro %}
+
+{% macro bar(paid, estimated, level) %}{% set percent = estimated > 0 ? min(100, paid / estimated * 100) : (paid > 0 ? 100 : 0) %}
+<svg class="bar {{ level }}" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="track" width="100" height="8"/><rect class="fill" width="{{ percent|round(1) }}" height="8"/></svg>
+{% endmacro %}
+
+{% macro category_options(categories, value) %}
+{% for group, list in categories %}<optgroup label="{{ group }}">{% for c in list %}<option value="{{ c.id }}"{% if c.id == value %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</optgroup>{% endfor %}
+{% endmacro %}
+
+{% macro category_select(categories, value) %}
+<select name="category_id" id="category_id" required><option value="">{{ t('app.choose') }}</option>{{ _self.category_options(categories, value) }}</select>
+{% endmacro %}
+
+{% macro select(name, rows, value, empty = null) %}
+<select name="{{ name }}" id="{{ name }}"{% if empty is null %} required{% endif %}>
+  <option value="">{{ empty ?? t('app.choose') }}</option>
+  {% for row in rows %}<option value="{{ row.id }}"{% if row.id == value %} selected{% endif %}>{{ row.name }}</option>{% endfor %}
+</select>
+{% endmacro %}
+
+{% macro radios(name, legend, options, value) %}
+<fieldset class="field choices"><legend>{{ legend }}</legend>
+  {% for key, label in options %}<label><input type="radio" name="{{ name }}" value="{{ key }}" required{% if key == value %} checked{% endif %}> {{ label }}</label>{% endfor %}
+</fieldset>
+{% endmacro %}
+
+{% macro people(people, value) %}
+<fieldset class="field choices"><legend>{{ t('fields.person') }}</legend>
+  {% for p in people %}<label><input type="radio" name="person_id" value="{{ p.id }}" required{% if p.id == value %} checked{% endif %}> {{ p.name }}</label>{% endfor %}
+</fieldset>
+{% endmacro %}
+
+{% macro amount(name, label, value, required = true) %}
+<div class="field"><label for="{{ name }}">{{ label }}</label>
+  <input id="{{ name }}" name="{{ name }}" inputmode="decimal" autocomplete="off" pattern="{{ amount_pattern() }}" data-example="{{ amount_example() }}" value="{{ value }}"{% if required %} required{% endif %}></div>
+{% endmacro %}
+
+{% macro merchants(list) %}<datalist id="merchants">{% for m in list %}<option value="{{ m }}">{% endfor %}</datalist>{% endmacro %}
+
+{% macro language_options(value) %}{% for code, name in languages() %}<option value="{{ code }}" lang="{{ code }}"{% if code == value %} selected{% endif %}>{{ name }}</option>{% endfor %}{% endmacro %}

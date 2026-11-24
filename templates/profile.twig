@@ -1,0 +1,26 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('profile.title') }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ me.name }}</h1>
+  {% if me.must_change_password %}<p class="notice info">{{ t('profile.temporary') }}</p>{% endif %}
+  <form method="post" action="/profile/password">
+    <h2>{{ t('profile.password') }}</h2>
+    {{ csrf() }}
+    <input type="hidden" name="username" autocomplete="username" value="{{ me.username }}">
+    <div class="field"><label for="current_password">{{ t('profile.current') }}</label><input id="current_password" name="current_password" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="password">{{ t('profile.new') }}</label><small id="password-hint">{{ t('profile.new_hint', {min: min}) }}</small><input id="password" name="password" type="password" autocomplete="new-password" minlength="{{ min }}" aria-describedby="password-hint" required></div>
+    <div class="field"><label for="password_confirm">{{ t('profile.repeat') }}</label><input id="password_confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="{{ min }}" required></div>
+    <button class="primary">{{ t('profile.change') }}</button>
+  </form>
+  {% if not me.must_change_password %}
+  <form method="post" action="/profile/language">
+    <h2>{{ t('profile.language') }}</h2>
+    {{ csrf() }}
+    <div class="field"><label for="locale">{{ t('profile.language') }}</label><select id="locale" name="locale"><option value="">{{ t('profile.default_language', {name: languages()[default_locale] ?? default_locale}) }}</option>{{ ui.language_options(me.locale) }}</select></div>
+    <button>{{ t('profile.save_language') }}</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

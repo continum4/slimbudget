@@ -1,0 +1,16 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('bills.title') }} {{ ym|month }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ t('bills.title') }}</h1>{{ ui.month_nav(ym, '/bills') }}
+  <form method="post" action="/months/{{ ym }}/bills/generate" class="actions">{{ csrf() }}<button>{{ t('bills.generate') }}</button></form></div>
+<dl class="kpis"><div><dt>{{ t('bills.to_pay') }}</dt><dd>{{ remaining|money }}</dd></div><div><dt>{{ t('bills.month_total') }}</dt><dd>{{ total|money }}</dd></div></dl>
+<section class="card"><h2>{{ t('bills.count', {count: bills|length}) }}</h2>
+  {% set looks = {paid: ['good', '✓'], partial: ['warn', '◔'], pending: ['warn', '○'], overdue: ['critical', '▲'], no_charge: ['idle', '○']} %}
+  <div class="table-box"><table class="ledger"><caption class="visually-hidden">{{ t('bills.title') }}</caption><thead><tr><th scope="col">{{ t('bills.due') }}</th><th scope="col">{{ t('bills.bill') }}</th><th scope="col">{{ t('app.status') }}</th><th scope="col" class="num">{{ t('bills.paid_amount') }}</th><th scope="col" class="num">{{ t('bills.remaining') }}</th><th scope="col" class="num">{{ t('fields.amount') }}</th></tr></thead><tbody>
+  {% for b in bills %}{% set secondary = 'num secondary' ~ (b.status != 'partial' ? ' redundant') %}<tr><td class="date">{{ b.due_on|day }}</td><th scope="row"><a href="/bills/{{ b.id }}">{{ b.name }}</a>{% if b.group_name %} <small>{{ t('bills.whole_group', {group: b.group_name}) }}</small>{% endif %}</th>
+    <td><span class="pill {{ looks[b.status][0] }}"><span aria-hidden="true">{{ looks[b.status][1] }}</span> {{ t('bills.statuses.' ~ b.status) }}</span></td><td data-t="{{ t('bills.paid_amount') }}" class="{{ secondary }}">{{ b.paid|money }}</td><td data-t="{{ t('bills.remaining') }}" class="{{ secondary }}">{{ b.remaining|money }}</td><td class="num">{{ b.amount|money }}</td></tr>
+  {% else %}<tr><td colspan="6">{{ t(open ? 'bills.empty' : 'bills.not_open') }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

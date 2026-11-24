@@ -1,0 +1,7 @@
+/vendor/
+/config/local.php
+/config/test.php
+/local/
+/var/*/*
+!/var/*/.gitkeep
+.phpunit.result.cache

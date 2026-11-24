@@ -1,0 +1,17 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('settings.title') }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ t('settings.title') }}</h1>
+  <form method="post" action="/settings">
+    {{ csrf() }}
+    <div class="field"><label for="currency">{{ t('settings.currency') }}</label><small id="currency-hint">{{ t('settings.currency_help') }}</small>
+      <select id="currency" name="currency" aria-describedby="currency-hint">{% for code, label in currencies %}<option value="{{ code }}"{% if code == old('currency', currency) %} selected{% endif %}>{{ code }} · {{ label }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="locale">{{ t('settings.language') }}</label><small id="locale-hint">{{ t('settings.language_help') }}</small>
+      <select id="locale" name="locale" aria-describedby="locale-hint">{{ ui.language_options(old('locale', default_locale)) }}</select>
+      {% if me.locale %}<p class="note">{{ t('settings.own_language', {name: languages()[me.locale] ?? me.locale}) }} <a href="/profile">{{ t('settings.change_own') }}</a></p>{% endif %}</div>
+    <button class="primary">{{ t('app.save') }}</button>
+  </form>
+</section>
+{% endblock %}

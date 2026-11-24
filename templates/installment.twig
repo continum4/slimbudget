@@ -1,0 +1,13 @@
+{% extends 'base.twig' %}
+{% block title %}{{ t('installments.edit') }}{% endblock %}
+{% block content %}
+<section class="card"><h1>{{ t('installments.edit') }}</h1>
+  <form method="post" action="/installments/{{ plan.id }}" class="form-grid">{{ csrf() }}
+    {{ include('_plan_fields.twig', {v: plan}) }}
+    <div class="field"><label for="end_month">{{ t('installments.last_month') }}</label><input type="month" id="end_month" name="end_month" placeholder="YYYY-MM" pattern="20\d\d-(0[1-9]|1[0-2])" value="{{ old('end_month', plan.end_month) }}" required></div>
+    <div class="field"><label><input type="checkbox" name="settled" value="1"{% if plan.settled %} checked{% endif %}> {{ t('installments.settled') }}</label></div>
+    <div class="field wide"><label for="note">{{ t('app.optional', {label: t('fields.note')}) }}</label><input id="note" name="note" maxlength="255" value="{{ old('note', plan.note) }}"></div>
+    <div class="field form-end"><button class="primary">{{ t('app.save') }}</button> <a class="button" href="/months/{{ current_ym }}/installments">{{ t('app.cancel') }}</a></div></form>
+  <form method="post" action="/installments/{{ plan.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: plan.concept}) }}">{{ csrf() }}<button class="danger">{{ t('installments.delete') }}</button></form>
+</section>
+{% endblock %}

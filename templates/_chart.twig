@@ -1,0 +1,13 @@
+{# c: Chart::columns, title #}
+<figure class="chart">
+  <figcaption>{{ title }}{% if c.series|length > 1 %}<span class="legend">{% for s in c.series %}<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="s{{ loop.index }}" width="10" height="10" rx="2"/></svg>{{ s }}</span>{% endfor %}</span>{% endif %}</figcaption>
+  <div class="scroll-x">
+    <svg viewBox="0 0 {{ c.width }} {{ c.height }}" width="{{ c.width }}" height="{{ c.height }}" role="group" aria-label="{{ title }}">
+      <g aria-hidden="true">
+      {% for tick in c.ticks %}<line class="{{ loop.first ? 'axis' : 'grid-line' }}" x1="{{ c.left }}" x2="{{ c.width }}" y1="{{ tick.y }}" y2="{{ tick.y }}"/><text x="{{ c.left - 8 }}" y="{{ tick.y + 4 }}" text-anchor="end">{{ tick.text }}</text>{% endfor %}
+      {% for a in c.axis %}<text x="{{ a.x }}" y="{{ c.base + 20 }}" text-anchor="middle">{{ a.text }}</text>{% endfor %}
+      </g>
+      {% for b in c.bars %}<g class="mark" role="img" tabindex="0" data-value="{{ b.value|money }}" data-series="{{ b.name }}" data-label="{{ b.label }}" aria-label="{{ b.name }}, {{ b.label }}: {{ b.value|money }}"><path class="s{{ b.series }}" d="{{ b.d }}"/><rect class="hit" x="{{ b.hit_x }}" y="{{ c.top }}" width="{{ b.hit_width }}" height="{{ c.plot }}"/></g>{% endfor %}
+    </svg>
+  </div>
+</figure>

@@ -1,0 +1,14 @@
+{% extends 'base.twig' %}
+{% block title %}{{ t('catalogs.names.' ~ catalog.key) }}{% endblock %}
+{% block content %}
+<h1>{{ t('catalogs.title') }}</h1>
+<nav class="tabs" aria-label="{{ t('catalogs.title') }}">{% for key in menu %}<a href="/catalogs/{{ key }}"{% if key == catalog.key %} aria-current="page"{% endif %}>{{ t('catalogs.names.' ~ key) }}</a>{% endfor %}</nav>
+<section class="card"><h2>{{ t('catalogs.add_one.' ~ catalog.key) }}</h2><form method="post" action="/catalogs/{{ catalog.key }}" class="form-grid">{{ csrf() }}{{ include('catalogs/_fields.twig', {row: {}}) }}<div class="field form-end"><button class="primary">{{ t('app.add') }}</button></div></form></section>
+<section class="card"><h2>{{ t('catalogs.names.' ~ catalog.key) }} ({{ rows|length }})</h2>
+  <div class="table-box"><table class="stackable"><caption class="visually-hidden">{{ t('catalogs.names.' ~ catalog.key) }}</caption><thead><tr>{% for field, d in catalog.fields %}<th scope="col"{% if d[0] in ['amount', 'integer'] %} class="num"{% endif %}>{{ t('catalogs.fields.' ~ field) }}</th>{% endfor %}<th scope="col">{{ t('app.status') }}</th></tr></thead><tbody>
+  {% for row in rows %}<tr{% if not row.active %} class="inactive"{% endif %}>{% for field, d in catalog.fields %}
+    {% if field == 'name' %}<th scope="row"><a href="/catalogs/{{ catalog.key }}/{{ row.id }}">{{ row.name }}</a></th>
+    {% else %}<td data-t="{{ t('catalogs.fields.' ~ field) }}"{% if d[0] in ['amount', 'integer'] %} class="num"{% endif %}>{% if d[0] starts with 'ref' %}{{ names[field][row[field]] ?? '—' }}{% elseif d[0] == 'checkbox' %}{{ t(row[field] ? 'app.yes' : 'app.no') }}{% elseif d[0] == 'amount' %}{{ row[field]|money }}{% elseif d[0] == 'option' %}{{ t('modes.' ~ row[field]) }}{% else %}{{ row[field] ?? '—' }}{% endif %}</td>{% endif %}{% endfor %}
+    <td data-t="{{ t('app.status') }}">{{ t(row.active ? 'app.active' : 'app.inactive') }}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endblock %}

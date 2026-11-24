@@ -1,0 +1,13 @@
+{
+  "Debt": { "Credit card": "installments" },
+  "Food": { "Coffee": "auto", "Delivery": "fixed", "Eating out": "auto", "Groceries": "fixed" },
+  "Health": { "Doctor": "auto", "Pharmacy": "auto" },
+  "Housing": { "Cleaning": "fixed", "Maintenance": "fixed", "Rent": "fixed" },
+  "Leisure": { "Books": "auto", "Outings": "auto", "Travel": "fixed" },
+  "Other": { "Gifts": "auto", "Miscellaneous": "auto" },
+  "Personal": { "Clothing": "auto", "Haircut": "auto", "Personal care": "auto" },
+  "Savings": { "Emergency fund": "fixed", "Investments": "fixed" },
+  "Subscriptions": { "Cloud storage": "fixed", "Music": "fixed", "Video streaming": "fixed" },
+  "Transport": { "Public transport": "auto", "Ride hailing": "fixed" },
+  "Utilities": { "Electricity": "fixed", "Internet": "fixed", "Mobile": "fixed", "Water": "fixed" }
+}

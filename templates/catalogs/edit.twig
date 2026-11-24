@@ -1,0 +1,10 @@
+{% extends 'base.twig' %}
+{% block title %}{{ t('catalogs.edit_one.' ~ catalog.key) }}{% endblock %}
+{% block content %}
+<section class="card"><h1>{{ t('catalogs.edit_one.' ~ catalog.key) }}</h1>
+  <form method="post" action="/catalogs/{{ catalog.key }}/{{ row.id }}" class="form-grid">{{ csrf() }}{{ include('catalogs/_fields.twig') }}
+    <div class="field"><label><input type="checkbox" name="active" value="1"{% if row.active %} checked{% endif %}> {{ t('app.active') }}</label></div>
+    <div class="field form-end"><button class="primary">{{ t('app.save') }}</button> <a class="button" href="/catalogs/{{ catalog.key }}">{{ t('app.cancel') }}</a></div></form>
+  <form method="post" action="/catalogs/{{ catalog.key }}/{{ row.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: row.name}) }}">{{ csrf() }}<button class="danger">{{ t('app.delete') }}</button></form>
+</section>
+{% endblock %}

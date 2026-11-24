@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="{{ locale() }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}{{ t('app.name') }}{% endblock %} · {{ t('app.name') }}</title>
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ asset('app.css') }}">
+  <script id="texts" type="application/json">{{ lang_branch('browser')|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP'))|raw }}</script>
+  <script src="{{ asset('app.js') }}" type="module"></script>
+</head>
+<body>
+{% if me is defined %}
+{% set m = ym ?? current_ym %}
+<a class="skip-link" href="#content">{{ t('app.skip') }}</a>
+<header class="topbar">
+  <div class="topbar-row">
+    <a class="brand" href="/months/{{ current_ym }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-6M10 19V6M16 19v-4M22 19v-8" transform="translate(-1)"/></svg><span>{{ t('app.name') }}</span></a>
+    <nav class="site-nav" aria-label="{{ t('app.main_nav') }}">
+      <button class="menu-button" type="button" popovertarget="menu" popovertargetaction="toggle" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>{{ t('app.menu') }}</span></button>
+      <ul id="menu" class="menu" popover="auto">
+        {% for url, key in {
+          ('/months/' ~ m): 'month', ('/months/' ~ m ~ '/expenses'): 'expenses', ('/months/' ~ m ~ '/cards'): 'cards',
+          ('/months/' ~ m ~ '/bills'): 'bills', ('/months/' ~ m ~ '/installments'): 'installments', ('/years/' ~ m|slice(0, 4)): 'year'
+        } %}
+        <li><a href="{{ url }}"{% if path == url %} aria-current="page"{% endif %}>{{ t('nav.' ~ key) }}</a></li>
+        {% endfor %}
+        {% if me.role == 'admin' %}
+        {% for url, key in {'/catalogs/categories': 'catalogs', '/users': 'users', '/settings': 'settings'} %}
+        <li><a href="{{ url }}"{% if path starts with url|replace({'/categories': ''}) %} aria-current="page"{% endif %}>{{ t('nav.' ~ key) }}</a></li>
+        {% endfor %}
+        {% endif %}
+        <li class="account"><a href="/profile"{% if path == '/profile' %} aria-current="page"{% endif %}>{{ me.name }}</a></li>
+        <li><form method="post" action="/logout">{{ csrf() }}<button>{{ t('app.log_out') }}</button></form></li>
+      </ul>
+    </nav>
+    <a class="button light" href="/months/{{ m }}/expenses#new">{{ t('nav.add_expense') }}</a>
+  </div>
+</header>
+{% endif %}
+<main id="content">
+  {% for n in notices ?? [] %}<p class="notice {{ n.level }}" role="{{ n.level == 'error' ? 'alert' : 'status' }}"><span class="icon" aria-hidden="true">{{ n.level == 'error' ? '▲' : '✓' }}</span> {{ n.text }}</p>{% endfor %}
+  {% if me is defined and review_count and path matches '#^/months/[\\d-]+(/expenses)?$#' %}
+    <p class="notice info"><span class="icon" aria-hidden="true">◔</span> {{ t('app.review_notice', {count: review_count}) }} <a href="/review">{{ t('app.review_link') }}</a></p>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+<dialog id="confirm" aria-labelledby="confirm-title" closedby="any">
+  <h1 id="confirm-title">{{ t('app.delete') }}</h1>
+  <form method="dialog">
+    <button value="no" autofocus>{{ t('app.cancel') }}</button>
+    <button value="yes" class="danger">{{ t('app.delete') }}</button>
+  </form>
+</dialog>
+</body>
+</html>

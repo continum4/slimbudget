@@ -1,0 +1,13 @@
+{
+  "Ahorro": { "Fondo de emergencias": "fixed", "Inversiones": "fixed" },
+  "Comida": { "A domicilio": "fixed", "Café": "auto", "Restaurantes": "auto", "Supermercado": "fixed" },
+  "Deuda": { "Tarjeta de crédito": "installments" },
+  "Ocio": { "Libros": "auto", "Salidas": "auto", "Viajes": "fixed" },
+  "Otros": { "Regalos": "auto", "Varios": "auto" },
+  "Personal": { "Cuidado personal": "auto", "Peluquería": "auto", "Ropa": "auto" },
+  "Salud": { "Doctores": "auto", "Farmacia": "auto" },
+  "Servicios": { "Agua": "fixed", "Electricidad": "fixed", "Internet": "fixed", "Teléfono": "fixed" },
+  "Suscripciones": { "Almacenamiento": "fixed", "Música": "fixed", "Video": "fixed" },
+  "Transporte": { "Transporte público": "auto", "Viajes por app": "fixed" },
+  "Vivienda": { "Limpieza": "fixed", "Mantenimiento": "fixed", "Renta": "fixed" }
+}

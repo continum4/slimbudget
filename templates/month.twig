@@ -1,0 +1,68 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ ym|month }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ t('month.title') }}</h1>{{ ui.month_nav(ym, '') }}
+  {% if me.role == 'admin' %}<div class="actions"><a class="button" href="/months/{{ ym }}/estimates">{{ t('month.edit_estimates') }}</a></div>{% endif %}
+</div>
+{% if not s.open %}
+<section class="card"><h2>{{ t('month.not_open', {month: ym|month}) }}</h2>
+  <p class="prose">{{ t('month.not_open_text') }}</p>
+  <form method="post" action="/months/{{ ym }}/open">{{ csrf() }}<button class="primary">{{ t('month.open', {month: ym|month}) }}</button></form></section>
+{% else %}
+{% set top = max(s.total_income, s.paid, s.estimated, 1) %}
+<section class="card summary">
+  <div class="hero">
+    <h2>{{ t('month.balance') }}</h2>
+    <p class="hero-figure">{{ s.balance|money }}</p>
+    <p><span class="pill {{ s.balance < 0 ? 'critical' : 'good' }}"><span aria-hidden="true">{{ s.balance < 0 ? '▲' : '✓' }}</span> {{ t(s.balance < 0 ? 'month.deficit' : 'month.surplus') }}</span> <span class="note">{{ t('month.balance_note') }}</span></p>
+  </div>
+  <div>
+  <dl class="compare">
+    {% for key, f in {income: ['ref', s.total_income], budgeted: ['ref', s.estimated], paid: ['data', s.paid]} %}
+    <div><dt>{{ t('month.' ~ key) }}</dt><dd class="rail"><svg class="bar {{ f[0] }}" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="fill" width="{{ (f[1] / top * 100)|round(1) }}" height="8"/></svg></dd><dd class="num">{{ f[1]|money }}</dd></div>
+    {% endfor %}
+  </dl>
+  <p class="note">{{ s.difference < 0 ? t('month.over', {amount: (-s.difference)|money}) : t('month.under', {amount: s.difference|money}) }} {{ ui.status(s.status) }}</p>
+  </div>
+</section>
+<div class="main-aside">
+  <section class="card group-list"><h2>{{ t('month.where') }}</h2>
+    {% for g in s.groups %}
+    <details class="group">
+      <summary><span class="name">{{ g.name }}</span>{{ ui.bar(g.paid, g.estimated, g.status.level) }}<span class="figures"><strong>{{ g.paid|money }}</strong> <small>/ {{ g.estimated|money }}</small></span>{{ ui.status(g.status) }}</summary>
+      {% set used = g.categories|filter(c => c.estimated or c.paid) %}
+      {% if used %}<div class="table-box"><table class="stackable category-table">
+        <caption class="visually-hidden">{{ t('month.categories_of', {group: g.name}) }}</caption>
+        <thead><tr><th scope="col">{{ t('fields.category') }}</th><th scope="col" class="num">{{ t('fields.estimated') }}</th><th scope="col" class="num">{{ t('fields.paid') }}</th><th scope="col" class="num">{{ t('fields.balance') }}</th></tr></thead>
+        <tbody>{% for c in used %}<tr><th scope="row"><a href="/months/{{ ym }}/expenses?category={{ c.category_id }}">{{ c.name }}</a>{% if c.mode != 'fixed' %} <small>{{ t('month.' ~ c.mode ~ '_tag') }}</small>{% endif %}</th><td data-t="{{ t('fields.estimated') }}" class="num">{{ c.estimated|money }}</td><td data-t="{{ t('fields.paid') }}" class="num">{{ c.paid|money }}</td><td data-t="{{ t('fields.balance') }}" class="num{% if c.balance < 0 %} negative{% endif %}">{{ c.balance|money }}</td></tr>{% endfor %}</tbody>
+        <tfoot><tr><th scope="row">{{ t('app.total') }}</th><td data-t="{{ t('fields.estimated') }}" class="num">{{ g.estimated|money }}</td><td data-t="{{ t('fields.paid') }}" class="num">{{ g.paid|money }}</td><td data-t="{{ t('fields.balance') }}" class="num{% if g.balance < 0 %} negative{% endif %}">{{ g.balance|money }}</td></tr></tfoot>
+      </table></div>{% endif %}
+      {% set unused = g.categories|filter(c => not c.estimated and not c.paid) %}
+      {% if unused %}<p class="note">{{ t('month.unused', {list: unused|map(c => c.name)|join(', ')}) }}</p>{% endif %}
+    </details>
+    {% endfor %}
+  </section>
+  <div class="aside">
+    <section class="card"><h2>{{ t('bills.due_soon') }}</h2>
+      {% if due %}<table><caption class="visually-hidden">{{ t('bills.due_soon') }}</caption><thead><tr><th scope="col">{{ t('bills.bill') }}</th><th scope="col">{{ t('bills.due') }}</th><th scope="col" class="num">{{ t('bills.remaining') }}</th></tr></thead><tbody>
+        {% for b in due %}<tr><th scope="row"><a href="/bills/{{ b.id }}">{{ b.name }}</a>{% if b.status == 'overdue' %} <span class="pill critical"><span aria-hidden="true">▲</span> {{ t('bills.statuses.overdue') }}</span>{% endif %}</th><td class="date">{{ b.due_on|day }}</td><td class="num">{{ b.remaining|money }}</td></tr>{% endfor %}
+      </tbody><tfoot><tr><th scope="row" colspan="2">{{ t('app.total') }}</th><td class="num">{{ due|reduce((a, b) => a + b.remaining, 0)|money }}</td></tr></tfoot></table>{% else %}<p>{{ t('bills.all_paid') }}</p>{% endif %}
+    </section>
+    <section class="card" id="incomes"><h2>{{ t('incomes.title') }}</h2>
+      <table><caption class="visually-hidden">{{ t('incomes.title') }}</caption><tbody>
+        {% for i in s.incomes %}{% set label = i.description ?: t('incomes.kinds.' ~ i.kind) %}<tr><th scope="row">{{ label }}</th><td class="num">{{ i.amount|money }}</td>
+          <td class="num"><form method="post" action="/incomes/{{ i.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: label}) }}">{{ csrf() }}<button class="plain" aria-label="{{ t('app.delete_named', {name: label}) }}">{{ t('app.delete') }}</button></form></td></tr>{% endfor %}
+        {% for i in s.incomes_by_spending %}<tr><th scope="row">{{ t('incomes.by_spending', {name: i.name}) }} <small>{{ t('incomes.by_spending_note') }}</small></th><td class="num">{{ i.amount|money }}</td><td></td></tr>{% endfor %}
+      </tbody><tfoot><tr><th scope="row">{{ t('app.total') }}</th><td class="num">{{ s.total_income|money }}</td><td></td></tr></tfoot></table>
+      <details class="more"{% if old('kind') %} open{% endif %}><summary>{{ t('incomes.add') }}</summary>
+        <form method="post" action="/months/{{ ym }}/incomes">{{ csrf() }}
+          <div class="field"><label for="kind">{{ t('incomes.kind') }}</label><select id="kind" name="kind">{% for k in kinds %}<option value="{{ k }}"{% if old('kind') == k %} selected{% endif %}>{{ t('incomes.kinds.' ~ k) }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="description">{{ t('app.optional', {label: t('fields.description')}) }}</label><input id="description" name="description" maxlength="120" value="{{ old('description') }}"></div>
+          {{ ui.amount('amount', t('fields.amount'), old('amount')) }}
+          <button class="primary">{{ t('incomes.add') }}</button></form></details>
+    </section>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

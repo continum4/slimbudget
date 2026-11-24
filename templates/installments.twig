@@ -1,0 +1,20 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('installments.title') }}{% endblock %}
+{% macro table(plans) %}
+<div class="table-box"><table class="stackable"><caption class="visually-hidden">{{ t('installments.title') }}</caption><thead><tr><th scope="col">{{ t('fields.card') }}</th><th scope="col">{{ t('installments.concept') }}</th><th scope="col" class="num">{{ t('app.total') }}</th><th scope="col" class="num">{{ t('installments.installment') }}</th><th scope="col">{{ t('installments.period') }}</th><th scope="col" class="num">{{ t('installments.left') }}</th><th scope="col" class="num">{{ t('installments.balance') }}</th></tr></thead><tbody>
+{% for p in plans %}<tr><td data-t="{{ t('fields.card') }}">{{ p.card }}</td><th scope="row"><a href="/installments/{{ p.id }}">{{ p.concept }}</a>{% if p.note %} <span class="pill warn"><span aria-hidden="true">◔</span> {{ t('installments.with_note') }}</span>{% endif %}</th><td data-t="{{ t('app.total') }}" class="num">{{ p.total_amount|money }}</td><td data-t="{{ t('installments.installment') }}" class="num">{{ p.installment|money }}</td><td data-t="{{ t('installments.period') }}">{{ p.start_month|month_short }} – {{ p.end_month|month_short }}</td><td data-t="{{ t('installments.left') }}" class="num">{{ t('installments.left_of', {left: p.left_count, total: p.installments}) }}</td><td data-t="{{ t('installments.balance') }}" class="num">{{ (p.total_amount / p.installments * p.left_count)|money }}</td></tr>
+{% else %}<tr><td colspan="7">{{ t('installments.none') }}</td></tr>{% endfor %}</tbody></table></div>
+{% endmacro %}
+{% block content %}
+<div class="page-head"><h1>{{ t('installments.title') }}</h1>{{ ui.month_nav(ym, '/installments') }}</div>
+<dl class="kpis"><div><dt>{{ t('installments.this_month', {month: ym|month}) }}</dt><dd>{{ projection[0].amount|money }}</dd></div><div><dt>{{ t('installments.balance_after', {month: ym|month}) }}</dt><dd>{{ balance|money }}</dd></div><div><dt>{{ t('installments.current_plans') }}</dt><dd>{{ current|length }}</dd></div></dl>
+<section class="card">{{ include('_chart.twig', {c: chart, title: t('installments.chart')}) }}
+  <details class="more"><summary>{{ t('installments.as_table') }}</summary><table><caption class="visually-hidden">{{ t('installments.chart') }}</caption><thead><tr><th scope="col">{{ t('installments.month') }}</th><th scope="col" class="num">{{ t('installments.series') }}</th></tr></thead><tbody>{% for x in projection %}<tr><th scope="row">{{ x.ym|month }}</th><td class="num">{{ x.amount|money }}</td></tr>{% endfor %}</tbody></table></details></section>
+<section class="card" id="new"><h2>{{ t('installments.add') }}</h2>
+  <form method="post" action="/months/{{ ym }}/installments" class="form-grid">{{ csrf() }}
+    {{ include('_plan_fields.twig', {v: {card_id: '', concept: '', total_amount: '', installments: '', start_month: month_add(ym, 1), purchased_on: '', merchant: ''}}) }}
+    <div class="field form-end"><button class="primary">{{ t('installments.save') }}</button></div></form></section>
+<section class="card"><h2>{{ t('installments.current') }}</h2>{{ _self.table(current) }}</section>
+<details class="card more"><summary>{{ t('installments.finished', {count: finished|length}) }}</summary>{{ _self.table(finished) }}</details>
+{% endblock %}

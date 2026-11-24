@@ -1,0 +1,6 @@
+{% import '_macros.twig' as ui %}
+<div class="field"><label for="username">{{ t('users.username') }}</label><input id="username" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40" value="{{ old('username', v.username) }}" required></div>
+<div class="field"><label for="name">{{ t('fields.name') }}</label><input id="name" name="name" autocomplete="off" maxlength="80" value="{{ old('name', v.name) }}" required></div>
+{% set labels = {} %}{% for r in roles %}{% set labels = labels|merge({(r): t('users.roles.' ~ r)}) %}{% endfor %}
+{{ ui.radios('role', t('users.role'), labels, old('role', v.role)) }}
+<div class="field"><label for="person_id">{{ t('app.optional', {label: t('users.default_person')}) }}</label>{{ ui.select('person_id', people, old('person_id', v.person_id), t('app.none')) }}</div>

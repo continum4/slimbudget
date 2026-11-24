@@ -1,0 +1,9 @@
+{% import '_macros.twig' as ui %}
+{{ ui.amount('amount', t('fields.amount'), old('amount', v.amount|amount)) }}
+<div class="field"><label for="spent_on">{{ t('fields.date') }}</label><input type="date" id="spent_on" name="spent_on" value="{{ old('spent_on', v.spent_on) }}" required></div>
+<div class="field wide"><label for="description">{{ t('fields.description') }}</label><input id="description" name="description" maxlength="150" autocomplete="off" value="{{ old('description', v.description) }}" required></div>
+<div class="field wide"><label for="category_id">{{ t('fields.category') }}</label>{{ ui.category_select(categories, old('category_id', v.category_id)) }}</div>
+{{ ui.people(people, old('person_id', v.person_id)) }}
+<div class="field"><label for="card_id">{{ t('fields.card') }}</label>{{ ui.select('card_id', cards, old('card_id', v.card_id), t('fields.no_card')) }}</div>
+<div class="field"><label for="merchant">{{ t('app.optional', {label: t('fields.merchant')}) }}</label><input id="merchant" name="merchant" list="merchants" maxlength="80" autocomplete="off" value="{{ old('merchant', v.merchant) }}"></div>
+{{ ui.merchants(merchants) }}

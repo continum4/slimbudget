@@ -1,0 +1,25 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('estimates.title') }} {{ ym|month }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ t('estimates.title') }}</h1>{{ ui.month_nav(ym, '/estimates') }}</div>
+<p class="note">{{ t('estimates.help')|raw }}</p>
+<form method="post" action="/months/{{ ym }}/estimates">{{ csrf() }}
+  <section class="card">
+    <div class="table-box"><table class="stackable estimates"><caption class="visually-hidden">{{ t('estimates.caption', {month: ym|month}) }}</caption>
+      <thead><tr><th scope="col">{{ t('fields.category') }}</th><th scope="col" class="col-mode">{{ t('estimates.mode') }}</th><th scope="col" class="num col-amount">{{ t('estimates.fixed_amount') }}</th><th scope="col" class="num col-paid">{{ t('fields.paid') }}</th></tr></thead>
+      {% for g in s.groups %}
+      <tbody>
+        <tr class="group-row"><th colspan="4" scope="rowgroup">{{ g.name }}</th></tr>
+        {% for c in g.categories %}<tr><th scope="row" id="c{{ c.category_id }}">{{ c.name }}</th>
+          <td data-t="{{ t('estimates.mode') }}"><select name="estimates[{{ c.category_id }}][mode]" aria-label="{{ t('estimates.mode_of', {name: c.name}) }}" data-mode>{% for m in modes %}<option value="{{ m }}"{% if c.mode == m %} selected{% endif %}>{{ t('modes.' ~ m) }}</option>{% endfor %}</select></td>
+          <td data-t="{{ t('estimates.fixed_amount') }}" class="num"><input class="short" name="estimates[{{ c.category_id }}][amount]" inputmode="decimal" pattern="{{ amount_pattern() }}" data-example="{{ amount_example() }}" aria-labelledby="c{{ c.category_id }}" value="{{ (c.mode == 'fixed' ? (amounts[c.category_id] ?? 0) : 0)|amount }}"{% if c.mode != 'fixed' %} readonly{% endif %}></td>
+          <td data-t="{{ t('fields.paid') }}" class="num">{{ c.paid|money }}</td></tr>
+        {% endfor %}
+      </tbody>
+      {% endfor %}
+    </table></div>
+  </section>
+  <div class="sticky-footer"><button class="primary">{{ t('estimates.save') }}</button> <a class="button" href="/months/{{ ym }}">{{ t('app.cancel') }}</a></div>
+</form>
+{% endblock %}

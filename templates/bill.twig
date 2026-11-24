@@ -1,0 +1,33 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ bill.name }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ bill.name }}</h1><p class="note"><a href="/months/{{ ym }}/bills">{{ t('bills.back', {month: ym|month}) }}</a> · {{ t('bills.due_on', {date: bill.due_on|day}) }}</p></div>
+<dl class="kpis"><div><dt>{{ t('bills.remaining') }}</dt><dd>{{ bill.remaining|money }}</dd></div><div><dt>{{ t('bills.paid_amount') }}</dt><dd>{{ bill.paid|money }}</dd></div><div><dt>{{ t('bills.month_amount') }}</dt><dd>{{ bill.amount|money }}</dd></div></dl>
+<div class="two-up">
+{% if bill.group_id %}
+<section class="card"><h2>{{ t('bills.progress') }}</h2><p>{{ t('bills.automatic_group', {group: bill.group_name}) }}</p></section>
+{% else %}
+<section class="card"><h2>{{ t('bills.record') }}</h2>
+  <form method="post" action="/bills/{{ bill.id }}/pay">{{ csrf() }}
+    <div class="field"><label for="spent_on">{{ t('fields.date') }}</label><input type="date" id="spent_on" name="spent_on" value="{{ old('spent_on', 'now'|date('Y-m-d')) }}" required></div>
+    <div class="field"><label for="description">{{ t('fields.description') }}</label><input id="description" name="description" maxlength="150" value="{{ old('description', bill.name) }}" required></div>
+    <div class="field"><label for="category_id">{{ t('fields.category') }}</label>{{ ui.category_select(categories, old('category_id', bill.category_id)) }}</div>
+    {{ ui.amount('payment', t('fields.amount'), old('payment', bill.remaining|amount)) }}
+    {{ ui.people(people, old('person_id', default_person)) }}
+    <div class="field"><label for="card_id">{{ t('bills.card_if') }}</label>{{ ui.select('card_id', cards, old('card_id', ''), t('fields.no_card')) }}</div>
+    <button class="primary">{{ t('bills.record') }}</button>
+  </form></section>
+{% endif %}
+<section class="card"><h2>{{ t('bills.details') }}</h2>
+  <form method="post" action="/bills/{{ bill.id }}">{{ csrf() }}
+    {{ ui.amount('amount', t('bills.month_amount'), old('amount', bill.amount|amount)) }}
+    <div class="field"><label for="due_on">{{ t('bills.due') }}</label><input type="date" id="due_on" name="due_on" value="{{ old('due_on', bill.due_on) }}" required></div>
+    {{ ui.amount('unlinked_payment', t('bills.unlinked'), old('unlinked_payment', bill.unlinked_payment|amount)) }}
+    <p class="note">{{ t('bills.unlinked_help') }}</p>
+    <button>{{ t('bills.save') }}</button>
+  </form>
+  <h2 class="spaced">{{ t('bills.linked') }}</h2>
+  {% if payments %}<table><caption class="visually-hidden">{{ t('bills.linked') }}</caption><tbody>{% for p in payments %}<tr><td class="date">{{ p.spent_on|day }}</td><td><a href="/expenses/{{ p.id }}">{{ p.description }}</a> <small>{{ p.person }}</small></td><td class="num">{{ p.amount|money }}</td></tr>{% endfor %}</tbody></table>{% else %}<p>{{ t('bills.no_linked') }}</p>{% endif %}
+</section></div>
+{% endblock %}

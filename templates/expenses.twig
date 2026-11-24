@@ -1,0 +1,29 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('expenses.title') }} {{ ym|month }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ t('expenses.title') }}</h1>{{ ui.month_nav(ym, '/expenses') }}</div>
+<div class="form-list">
+<section class="card" id="new"><h2>{{ t('expenses.add') }}</h2>
+  <form method="post" action="/months/{{ ym }}/expenses" class="form-grid two-col">{{ csrf() }}
+    {{ include('_expense_fields.twig', {v: {spent_on: default_date, description: '', category_id: '', amount: '', person_id: default_person, card_id: '', merchant: ''}}) }}
+    <div class="field form-end"><button class="primary">{{ t('expenses.save') }}</button></div>
+  </form>
+  {% set link %}<a href="/months/{{ ym }}/installments#new">{{ t('nav.installments') }}</a>{% endset %}
+  <p class="note">{{ t('expenses.installments_hint')|e|replace({'{link}': link})|raw }}</p>
+</section>
+<section class="card">
+  <div class="page-head"><h2>{{ t('expenses.count', {count: expenses|length}) }}</h2><strong class="total">{{ total|money }}</strong></div>
+  <details class="more filters"{% if filtered %} open{% endif %}><summary>{{ t(filtered ? 'expenses.filter_active' : 'expenses.filter') }}</summary>
+    <search><form method="get" action="/months/{{ ym }}/expenses" class="form-grid two-col">
+      <div class="field wide"><label for="f-q">{{ t('expenses.search') }}</label><input type="search" id="f-q" name="q" value="{{ filters.q }}" enterkeyhint="search" autocorrect="off" spellcheck="false"></div>
+      {% for key, rows in {group: groups, person: people, card: cards} %}
+      <div class="field"><label for="f-{{ key }}">{{ t('fields.' ~ key) }}</label><select id="f-{{ key }}" name="{{ key }}"><option value="">{{ t('app.all') }}</option>{% for row in rows %}<option value="{{ row.id }}"{% if row.id == filters[key] %} selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+      {% endfor %}
+      <div class="field"><label for="f-category">{{ t('fields.category') }}</label><select id="f-category" name="category"><option value="">{{ t('app.all') }}</option>{{ ui.category_options(categories, filters.category) }}</select></div>
+      <div class="field form-end"><button>{{ t('expenses.apply') }}</button>{% if filtered %} <a class="button" href="/months/{{ ym }}/expenses">{{ t('expenses.clear') }}</a>{% endif %}</div>
+    </form></search></details>
+  {{ include('_expense_table.twig') }}
+</section>
+</div>
+{% endblock %}

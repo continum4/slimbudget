@@ -1,0 +1,122 @@
+{
+  "ARS": {
+    "name": "Argentine peso",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ",",
+    "thousands": ".",
+    "decimals": 2
+  },
+  "AUD": {
+    "name": "Australian dollar",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "BRL": {
+    "name": "Brazilian real",
+    "symbol": "R$ ",
+    "position": "before",
+    "decimal": ",",
+    "thousands": ".",
+    "decimals": 2
+  },
+  "CAD": {
+    "name": "Canadian dollar",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "CHF": {
+    "name": "Swiss franc",
+    "symbol": "CHF ",
+    "position": "before",
+    "decimal": ".",
+    "thousands": "’",
+    "decimals": 2
+  },
+  "CLP": {
+    "name": "Chilean peso",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ",",
+    "thousands": ".",
+    "decimals": 0
+  },
+  "COP": {
+    "name": "Colombian peso",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ",",
+    "thousands": ".",
+    "decimals": 0
+  },
+  "EUR": {
+    "name": "Euro",
+    "symbol": " €",
+    "position": "after",
+    "decimal": ",",
+    "thousands": ".",
+    "decimals": 2
+  },
+  "GBP": {
+    "name": "Pound sterling",
+    "symbol": "£",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "INR": {
+    "name": "Indian rupee",
+    "symbol": "₹",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "JPY": {
+    "name": "Japanese yen",
+    "symbol": "¥",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 0
+  },
+  "MXN": {
+    "name": "Mexican peso",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "PEN": {
+    "name": "Peruvian sol",
+    "symbol": "S/ ",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "USD": {
+    "name": "US dollar",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ".",
+    "thousands": ",",
+    "decimals": 2
+  },
+  "UYU": {
+    "name": "Uruguayan peso",
+    "symbol": "$",
+    "position": "before",
+    "decimal": ",",
+    "thousands": ".",
+    "decimals": 2
+  }
+}
