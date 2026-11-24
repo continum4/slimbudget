@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\Input;
+use App\Services\Month;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Exception\HttpNotFoundException;
@@ -15,7 +16,7 @@ final class CatalogController extends Controller
         'groups' => ['table' => 'category_groups', 'fields' => ['name' => ['text', 60]]],
         'categories' => ['table' => 'categories', 'fields' => ['group_id' => ['ref', 'category_groups'], 'name' => ['text', 100], 'mode' => ['option', MonthController::MODES]]],
         'people' => ['table' => 'people', 'fields' => ['name' => ['text', 60], 'spending_is_income' => ['checkbox', null]]],
-        'cards' => ['table' => 'cards', 'fields' => ['name' => ['text', 80], 'alias' => ['text?', 40], 'category_id' => ['ref?', 'categories'], 'closing_day' => ['integer?', [1, 31]], 'due_day' => ['integer?', [1, 31]]]],
+        'cards' => ['table' => 'cards', 'fields' => ['name' => ['text', 80], 'alias' => ['text?', 40], 'category_id' => ['ref?', 'categories']]],
         'bills' => ['table' => 'bill_templates', 'fields' => ['name' => ['text', 80], 'day' => ['integer', [1, 31]], 'amount' => ['amount', null], 'category_id' => ['ref?', 'categories'], 'group_id' => ['ref?', 'category_groups']]],
     ];
 
@@ -60,8 +61,20 @@ final class CatalogController extends Controller
         };
         return $this->render($response, 'catalogs/index.twig', [
             'catalog' => $catalog, 'rows' => $this->db->all("SELECT * FROM {$catalog['table']} ORDER BY $order"),
-            'names' => $names, 'references' => $this->references($catalog), 'menu' => array_keys(self::CATALOGS),
+            'cycles' => $this->currentCycles($catalog), 'names' => $names, 'references' => $this->references($catalog), 'menu' => array_keys(self::CATALOGS),
         ]);
+    }
+
+    /** Statement dates in force for each card. */
+    private function currentCycles(array $catalog): array
+    {
+        $current = [];
+        if ($catalog['key'] === 'cards') {
+            foreach ($this->db->all('SELECT * FROM card_cycles WHERE from_month<=? ORDER BY from_month', [Month::current()]) as $cycle) {
+                $current[$cycle['card_id']] = $cycle;
+            }
+        }
+        return $current;
     }
 
     private function fields(array $catalog, Input $in): array
@@ -71,7 +84,7 @@ final class CatalogController extends Controller
             $label = $this->label($field);
             $data[$field] = match ($type) {
                 'text', 'text?' => $in->text($field, $label, $extra, $type === 'text'),
-                'integer', 'integer?' => $in->integer($field, $label, $extra[0], $extra[1], $type === 'integer'),
+                'integer' => $in->integer($field, $label, ...$extra),
                 'amount' => $in->amount($field, $label, true),
                 'checkbox' => $in->checkbox($field),
                 'option' => $in->option($field, $label, $extra),
@@ -97,7 +110,10 @@ final class CatalogController extends Controller
     {
         $catalog = $this->catalog($request, $args);
         $row = $this->find($request, $catalog['table'], $args['id']);
-        return $this->render($response, 'catalogs/edit.twig', ['catalog' => $catalog, 'row' => $row, 'references' => $this->references($catalog, $row)]);
+        return $this->render($response, 'catalogs/edit.twig', [
+            'catalog' => $catalog, 'row' => $row, 'references' => $this->references($catalog, $row),
+            'cycles' => $catalog['key'] === 'cards' ? $this->db->all('SELECT * FROM card_cycles WHERE card_id=? ORDER BY from_month DESC', [$row['id']]) : [],
+        ]);
     }
 
     public function update(Request $request, Response $response, array $args): Response

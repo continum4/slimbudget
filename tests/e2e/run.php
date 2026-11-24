@@ -141,11 +141,20 @@ $next1 = $statement($next, $green)['regular'];
 $db->run('INSERT INTO expenses (month_id, spent_on, description, category_id, person_id, amount, card_id) VALUES (?,?,?,?,1,100,?)', [$id('SELECT id FROM months WHERE ym=?', [$ym]), Month::date($ym, 2), 'Statement test', $expense['category_id'], $green]);
 $check('a card purchase counts once as spending', abs($budget->summary($ym)['paid'] - $totals['paid'] - 100) < 0.005);
 $check('and is charged next month', abs($statement($next, $green)['regular'] - $next1 - 100) < 0.005 && abs($statement($ym, $green)['regular'] - $spent) < 0.005);
-$admin->get("/catalogs/cards/$green")->post("/catalogs/cards/$green", ['name' => 'Green Card', 'alias' => 'Green', 'category_id' => $db->value('SELECT category_id FROM cards WHERE id=?', [$green]), 'closing_day' => '1', 'due_day' => '20', 'active' => 1]);
-$check('closing day moves the purchase to the next statement', $admin->sees('Changes saved.') && $budget->cardStatements($ym) !== [] && abs($statement($next, $green)['regular'] - (float) $db->value('SELECT SUM(amount) FROM expenses WHERE card_id=? AND spent_on BETWEEN ? AND ?', [$green, Month::date($ym, 2), "$next-01"])) < 0.005);
-$check('bad closing day', $admin->get("/catalogs/cards/$green")->post("/catalogs/cards/$green", ['name' => 'Green Card', 'closing_day' => '40', 'active' => 1])->sees('Closing day must be between 1 and 31.'));
-$admin->get("/catalogs/cards/$green")->post("/catalogs/cards/$green", ['name' => 'Green Card', 'alias' => 'Green', 'category_id' => $db->value('SELECT category_id FROM cards WHERE id=?', [$green]), 'closing_day' => '', 'due_day' => '', 'active' => 1]);
-$check('empty closing day goes back to the calendar', $db->value('SELECT closing_day FROM cards WHERE id=?', [$green]) === null);
+$admin->get("/catalogs/cards/$green");
+$cycle = static fn (array $data): Client => $admin->get("/catalogs/cards/$green")->post("/cards/$green/cycles", $data + ['closing_day' => '', 'due_day' => '', 'from_month' => '']);
+$check('closing day moves the purchase to the next statement', $cycle(['closing_day' => '1', 'due_day' => '20'])->sees('Statement dates saved.') && abs($statement($next, $green)['regular'] - (float) $db->value('SELECT COALESCE(SUM(amount),0) FROM expenses WHERE card_id=? AND spent_on BETWEEN ? AND ?', [$green, Month::date($ym, 2), "$next-01"])) < 0.005);
+$past = $statement($previous, $green);
+$cycle(['closing_day' => '5', 'due_day' => '25', 'from_month' => $next]);
+$check('a later change keeps earlier statements', $statement($previous, $green) == $past && $id('SELECT COUNT(*) FROM card_cycles WHERE card_id=?', [$green]) === 2);
+$cycle(['closing_day' => '6', 'due_day' => '26', 'from_month' => $next]);
+$check('the same month is replaced', $id('SELECT COUNT(*) FROM card_cycles WHERE card_id=?', [$green]) === 2 && $id('SELECT closing_day FROM card_cycles WHERE card_id=? AND from_month=?', [$green, $next]) === 6);
+$check('bad closing day', $cycle(['closing_day' => '40'])->sees('Closing day must be between 1 and 31.') && $id('SELECT COUNT(*) FROM card_cycles WHERE card_id=?', [$green]) === 2);
+foreach ($db->all('SELECT id FROM card_cycles WHERE card_id=?', [$green]) as $row) {
+    $admin->get("/catalogs/cards/$green")->post("/card-cycles/{$row['id']}/delete");
+}
+$check('without dates it goes back to the calendar', $admin->sees('Statement dates deleted.') && abs($statement($ym, $green)['regular'] - $spent) < 0.005);
+$check('editing the card keeps its dates', $admin->get('/catalogs/cards/1')->post('/catalogs/cards/1', ['name' => 'Blue Bank', 'alias' => 'Blue', 'category_id' => $db->value('SELECT category_id FROM cards WHERE id=1'), 'active' => 1])->sees('Changes saved.') && $id('SELECT COUNT(*) FROM card_cycles WHERE card_id=1') === 2);
 $check('month page shows it', $admin->get("/months/$ym")->sees('Card payments') && $admin->sees('does not add to spending'));
 $check('cards page shows both months', $admin->get("/months/$ym/cards")->sees('To pay in') && $admin->sees('Building up for'));
 $db->run("DELETE FROM expenses WHERE description='Statement test'");
@@ -190,6 +199,7 @@ $member->get('/login')->post('/login', ['username' => 'member', 'password' => 's
 foreach (['/users', '/settings', '/catalogs/groups', "/months/$ym/estimates"] as $path) {
     $check("member 403 $path", $member->get($path)->status === 403);
 }
+$check('member cannot change statement dates', $member->post('/cards/1/cycles', ['closing_day' => '9'])->status === 403);
 $check('member POST 403', $member->post('/catalogs/groups', ['name' => 'X'])->status === 403);
 $check('member records expenses as themselves', (bool) preg_match('/required checked> Riley/', $member->get("/months/$ym/expenses")->body));
 $db->run("UPDATE users SET active=0 WHERE username='member'");

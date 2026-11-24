@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use App\Controllers\AuthController;
 use App\Controllers\BillController;
+use App\Controllers\CardCycleController;
 use App\Controllers\CatalogController;
 use App\Controllers\ExpenseController;
 use App\Controllers\InstallmentController;
@@ -65,6 +66,8 @@ return static function (App $app): void {
             $a->get("/catalogs/{catalog}/$id", [CatalogController::class, 'edit']);
             $a->post("/catalogs/{catalog}/$id", [CatalogController::class, 'update']);
             $a->post("/catalogs/{catalog}/$id/delete", [CatalogController::class, 'delete']);
+            $a->post("/cards/$id/cycles", [CardCycleController::class, 'save']);
+            $a->post("/card-cycles/$id/delete", [CardCycleController::class, 'delete']);
             $a->get('/users', [UserController::class, 'index']);
             $a->post('/users', [UserController::class, 'create']);
             $a->get("/users/$id", [UserController::class, 'edit']);

@@ -1,0 +1,16 @@
+{# card, cycles, current_ym #}
+<section class="card edit" id="cycles"><h2>{{ t('cycles.title') }}</h2>
+  <p class="note">{{ t('cycles.help') }}</p>
+  {% if cycles %}<div class="table-box"><table class="stackable cycles"><caption class="visually-hidden">{{ t('cycles.title') }}</caption>
+    <thead><tr><th scope="col">{{ t('cycles.from') }}</th><th scope="col" class="num">{{ t('cycles.closing_day') }}</th><th scope="col" class="num">{{ t('cycles.due_day') }}</th><th scope="col"><span class="visually-hidden">{{ t('fields.actions') }}</span></th></tr></thead>
+    <tbody>{% for c in cycles %}{% set label = c.from_month == '0000-00' ? t('cycles.beginning') : c.from_month|month %}<tr><th scope="row">{{ label }}</th><td data-t="{{ t('cycles.closing_day') }}" class="num">{{ c.closing_day ?? t('cycles.calendar') }}</td><td data-t="{{ t('cycles.due_day') }}" class="num">{{ c.due_day ?? '—' }}</td>
+      <td class="num"><form method="post" action="/card-cycles/{{ c.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: label}) }}">{{ csrf() }}<button class="plain" aria-label="{{ t('app.delete_named', {name: label}) }}">{{ t('app.delete') }}</button></form></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<p>{{ t('cycles.none') }}</p>{% endif %}
+  <form method="post" action="/cards/{{ card.id }}/cycles" class="form-grid three-col">{{ csrf() }}
+    <div class="field"><label for="closing_day">{{ t('app.optional', {label: t('cycles.closing_day')}) }}</label><input type="number" id="closing_day" name="closing_day" min="1" max="31" value="{{ old('closing_day') }}"></div>
+    <div class="field"><label for="due_day">{{ t('app.optional', {label: t('cycles.due_day')}) }}</label><input type="number" id="due_day" name="due_day" min="1" max="31" value="{{ old('due_day') }}"></div>
+    <div class="field"><label for="from_month">{{ t('cycles.from') }}</label><input type="month" id="from_month" name="from_month" placeholder="YYYY-MM" pattern="20\d\d-(0[1-9]|1[0-2])" aria-describedby="from-hint" value="{{ old('from_month', cycles ? current_ym : '') }}"></div>
+    <p class="note wide" id="from-hint">{{ t('cycles.from_hint') }}</p>
+    <div class="form-actions wide"><button class="primary">{{ t('cycles.save') }}</button></div>
+  </form>
+</section>
