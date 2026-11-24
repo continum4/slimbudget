@@ -192,6 +192,11 @@
   .field { display: flex; flex-direction: column; gap: .3rem; min-inline-size: 0; }
   form:not(.form-grid) > .field { margin-block-end: var(--space-4); }
   .field label, .choices legend { font-size: .9375rem; color: var(--ink-2); }
+  /* A lone checkbox lines up with the controls next to it, not with their labels */
+  .form-grid > .field:has(> label > input[type=checkbox]) { align-self: end; }
+  .check-row { padding: var(--space-1) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--surface-2); }
+  .form-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); padding-block-start: var(--space-4); border-block-start: 1px solid var(--line); }
+  .form-actions > .danger { margin-inline-start: auto; }
   .field label:has(> input) { display: flex; align-items: center; gap: var(--space-2); min-block-size: 3rem; color: var(--ink); }
   .choices { border: 0; padding: 0; margin: 0; display: flex; flex-flow: row wrap; gap: var(--space-2); }
   .choices legend { padding: 0; margin-block-end: .3rem; }
@@ -223,6 +228,8 @@
 @layer pages {
   main { max-inline-size: 78rem; margin-inline: auto; padding: var(--space-5) var(--space-4) var(--space-6); display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr); }
   .two-up { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: start; }
+  .edit { inline-size: min(100%, 46rem); margin-inline: auto; display: grid; gap: var(--space-5); }
+  .edit > form[id]:not(.form-grid) { display: none; }
   .narrow { inline-size: min(100%, 26rem); margin: 4dvh auto; display: grid; gap: var(--space-4); }
   .narrow .primary { inline-size: 100%; }
   .language { display: flex; gap: var(--space-2); align-items: end; } .language .field { flex: 1; margin-block-end: 0; }

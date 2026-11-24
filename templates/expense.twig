@@ -1,13 +1,16 @@
 {% extends 'base.twig' %}
 {% block title %}{{ t('expenses.edit') }}{% endblock %}
 {% block content %}
-<section class="card"><h1>{{ t('expenses.edit') }}</h1>
-  <p class="note">{{ t('expenses.edit_note', {month: expense.ym|month}) }}{% if expense.note %} {{ t('fields.note') }}: {{ expense.note }}.{% endif %}</p>
-  <form method="post" action="/expenses/{{ expense.id }}" class="form-grid">{{ csrf() }}
+<section class="card edit">
+  <div class="page-head"><h1>{{ t('expenses.edit') }}</h1><p class="note">{{ t('expenses.counts_in', {month: expense.ym|month}) }}</p></div>
+  {% if expense.needs_review %}<p class="notice info"><span class="icon" aria-hidden="true">◔</span> {{ t('expenses.needs_review') }}{% if expense.note %}: {{ expense.note }}{% endif %}</p>
+  {% elseif expense.note %}<p class="note">{{ t('fields.note') }}: {{ expense.note }}</p>{% endif %}
+  <form method="post" action="/expenses/{{ expense.id }}" class="form-grid two-col">{{ csrf() }}
     {{ include('_expense_fields.twig', {v: expense}) }}
-    {% if expense.needs_review %}<div class="field"><label><input type="checkbox" name="needs_review" value="1" checked> {{ t('expenses.still_review') }}</label></div>{% endif %}
-    <div class="field form-end"><button class="primary">{{ t('app.save') }}</button> <a class="button" href="/months/{{ expense.ym }}/expenses">{{ t('app.cancel') }}</a></div>
+    <p class="note wide">{{ t('expenses.date_hint') }}</p>
+    {% if expense.needs_review %}<div class="field wide check-row"><label><input type="checkbox" name="needs_review" value="1" checked> {{ t('expenses.still_review') }}</label></div>{% endif %}
+    <div class="form-actions wide"><button class="primary">{{ t('app.save') }}</button><a class="button" href="/months/{{ expense.ym }}/expenses">{{ t('app.cancel') }}</a><button class="danger" form="delete-expense">{{ t('expenses.delete') }}</button></div>
   </form>
-  <form method="post" action="/expenses/{{ expense.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: expense.description ~ ' (' ~ expense.amount|money ~ ')'}) }}">{{ csrf() }}<button class="danger">{{ t('expenses.delete') }}</button></form>
+  <form id="delete-expense" method="post" action="/expenses/{{ expense.id }}/delete" data-confirm="{{ t('app.confirm_delete', {name: expense.description ~ ' (' ~ expense.amount|money ~ ')'}) }}">{{ csrf() }}</form>
 </section>
 {% endblock %}
