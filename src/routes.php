@@ -45,6 +45,7 @@ return static function (App $app): void {
         $g->post("/months/$ym/expenses", [ExpenseController::class, 'create']);
         $g->get("/months/$ym/cards", [ExpenseController::class, 'cards']);
         $g->get('/review', [ExpenseController::class, 'review']);
+        $g->get('/search', [ExpenseController::class, 'search']);
         $g->get("/expenses/$id", [ExpenseController::class, 'edit']);
         $g->post("/expenses/$id", [ExpenseController::class, 'update']);
         $g->post("/expenses/$id/delete", [ExpenseController::class, 'delete']);

@@ -1,6 +1,6 @@
 {% if expenses %}
 <div class="table-box"><table class="ledger">
-  <caption class="visually-hidden">{{ t('expenses.title') }}</caption>
+  <caption class="visually-hidden">{{ caption ?? t('expenses.title') }}</caption>
   <thead><tr><th scope="col">{{ t('fields.date') }}</th><th scope="col">{{ t('fields.description') }}</th><th scope="col">{{ t('fields.category') }}</th><th scope="col">{{ t('fields.person') }}</th><th scope="col">{{ t('fields.card') }}</th><th scope="col" class="num">{{ t('fields.amount') }}</th></tr></thead>
   <tbody>{% for x in expenses %}<tr>
     <td class="date">{{ x.spent_on|day }}</td>

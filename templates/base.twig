@@ -22,7 +22,7 @@
       <ul id="menu" class="menu" popover="auto">
         {% for url, key in {
           ('/months/' ~ m): 'month', ('/months/' ~ m ~ '/expenses'): 'expenses', ('/months/' ~ m ~ '/cards'): 'cards',
-          ('/months/' ~ m ~ '/bills'): 'bills', ('/months/' ~ m ~ '/installments'): 'installments', ('/years/' ~ m|slice(0, 4)): 'year'
+          ('/months/' ~ m ~ '/bills'): 'bills', ('/months/' ~ m ~ '/installments'): 'installments', ('/years/' ~ m|slice(0, 4)): 'year', '/search': 'search'
         } %}
         <li><a href="{{ url }}"{% if path == url or (key == 'year' and path starts with '/years/') %} aria-current="page"{% endif %}>{{ t('nav.' ~ key) }}</a></li>
         {% endfor %}
