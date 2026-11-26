@@ -108,7 +108,7 @@ $all = $id("SELECT COUNT(*) FROM expenses x JOIN months m ON m.id=x.month_id WHE
 $pages = (int) ceil($all / 50);
 $admin->get("/search?from=$first");
 $check('search is paged', $pages > 1 && $admin->sees("Page 1 of $pages") && substr_count($admin->body, '<td class="date">') === 50 && $admin->sees('rel="next"') && !$admin->sees('rel="prev"'), [$all, $pages]);
-$check('page out of range goes to the last one', $admin->get("/search?from=$first&page=999")->sees("Page $pages of $pages") && !$admin->sees('rel="next"') && $admin->sees('href="/search?from=' . $first . '&amp;page=' . ($pages - 1) . '"'));
+$check('page out of range goes to the last one', $admin->get("/search?from=$first&page=999")->sees("Page $pages of $pages") && !$admin->sees('rel="next"') && $admin->sees('href="/search?from=' . $first . '&page=' . ($pages - 1) . '"'));
 $check('LIKE wildcards are literal', $admin->get('/search?q=%25')->sees('No expenses match.'));
 
 // Bills
