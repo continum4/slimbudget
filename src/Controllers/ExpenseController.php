@@ -11,36 +11,83 @@ use Slim\Exception\HttpNotFoundException;
 
 final class ExpenseController extends Controller
 {
-    private const SELECT = 'SELECT x.*, m.ym, c.name category, c.group_id, g.name group_name, p.name person, COALESCE(k.alias, k.name) card
-        FROM expenses x JOIN months m ON m.id=x.month_id JOIN categories c ON c.id=x.category_id JOIN category_groups g ON g.id=c.group_id
+    private const FROM = ' FROM expenses x JOIN months m ON m.id=x.month_id JOIN categories c ON c.id=x.category_id JOIN category_groups g ON g.id=c.group_id
         JOIN people p ON p.id=x.person_id LEFT JOIN cards k ON k.id=x.card_id';
+    private const SELECT = 'SELECT x.*, m.ym, c.name category, c.group_id, g.name group_name, p.name person, COALESCE(k.alias, k.name) card' . self::FROM;
+    private const PER_PAGE = 50;
 
-    public function index(Request $request, Response $response, array $args): Response
+    /** Text and catalog filters from the query string, as [filters, SQL conditions, parameters]. */
+    private function filters(array $query): array
     {
-        $ym = $args['ym'];
-        $query = $request->getQueryParams();
         $filters = ['q' => is_string($query['q'] ?? null) ? trim($query['q']) : ''];
-        $sql = ' WHERE m.ym=?';
-        $params = [$ym];
+        $where = $params = [];
         foreach (['group' => 'c.group_id', 'category' => 'x.category_id', 'person' => 'x.person_id', 'card' => 'x.card_id'] as $key => $column) {
             $filters[$key] = filter_var($query[$key] ?? '', FILTER_VALIDATE_INT) ?: 0;
             if ($filters[$key]) {
-                $sql .= " AND $column=?";
+                $where[] = "$column=?";
                 $params[] = $filters[$key];
             }
         }
         if ($filters['q'] !== '') {
-            $sql .= ' AND (x.description LIKE ? OR x.merchant LIKE ?)';
+            $where[] = '(x.description LIKE ? OR x.merchant LIKE ?)';
             $like = '%' . addcslashes($filters['q'], '%_\\') . '%';
             array_push($params, $like, $like);
         }
-        $expenses = $this->db->all(self::SELECT . $sql . ' ORDER BY x.spent_on DESC, x.id DESC', $params);
+        return [$filters, $where, $params];
+    }
+
+    public function index(Request $request, Response $response, array $args): Response
+    {
+        $ym = $args['ym'];
+        [$filters, $where, $params] = $this->filters($request->getQueryParams());
+        $sql = ' WHERE ' . implode(' AND ', ['m.ym=?', ...$where]);
+        $expenses = $this->db->all(self::SELECT . $sql . ' ORDER BY x.spent_on DESC, x.id DESC', [$ym, ...$params]);
         return $this->render($response, 'expenses.twig', $this->lists() + [
             'ym' => $ym, 'expenses' => $expenses, 'filters' => $filters, 'filtered' => (bool) array_filter($filters),
             'total' => array_sum(array_column($expenses, 'amount')),
             'default_date' => $ym === Month::current() ? date('Y-m-d') : "$ym-01",
             'default_person' => $request->getAttribute('user')['person_id'],
         ]);
+    }
+
+    /** Expenses of every month, grouped by month and paged. Without filters it only shows the form. */
+    public function search(Request $request, Response $response): Response
+    {
+        $query = $request->getQueryParams();
+        [$filters, $where, $params] = $this->filters($query);
+        foreach (['from', 'to'] as $key) {
+            $filters[$key] = is_string($query[$key] ?? null) && Month::isValid($query[$key]) ? $query[$key] : '';
+        }
+        if ($filters['from'] && $filters['to'] && $filters['from'] > $filters['to']) {
+            [$filters['from'], $filters['to']] = [$filters['to'], $filters['from']];
+        }
+        foreach (['from' => 'm.ym>=?', 'to' => 'm.ym<=?'] as $key => $condition) {
+            if ($filters[$key]) {
+                $where[] = $condition;
+                $params[] = $filters[$key];
+            }
+        }
+        $active = array_filter($filters);
+        $data = ['filters' => $filters, 'active' => $active, 'months' => [], 'count' => 0, 'total' => 0.0, 'page' => 1, 'pages' => 0];
+        if ($active) {
+            $sql = ' WHERE ' . implode(' AND ', $where);
+            $months = [];
+            foreach ($this->db->all('SELECT m.ym, COUNT(*) n, SUM(x.amount) total' . self::FROM . $sql . ' GROUP BY m.ym ORDER BY m.ym DESC', $params) as $row) {
+                $months[$row['ym']] = ['ym' => $row['ym'], 'count' => (int) $row['n'], 'total' => (float) $row['total'], 'expenses' => []];
+            }
+            $data['count'] = array_sum(array_column($months, 'count'));
+            $data['total'] = array_sum(array_column($months, 'total'));
+            $data['pages'] = (int) ceil($data['count'] / self::PER_PAGE);
+            $data['page'] = max(1, min($data['pages'], filter_var($query['page'] ?? 1, FILTER_VALIDATE_INT) ?: 1));
+            // An expense can sit in another month than its date (a bill paid early): order by month first so groups stay together
+            $offset = ($data['page'] - 1) * self::PER_PAGE;
+            $rows = $this->db->all(self::SELECT . $sql . ' ORDER BY m.ym DESC, x.spent_on DESC, x.id DESC LIMIT ' . self::PER_PAGE . " OFFSET $offset", $params);
+            foreach ($rows as $row) {
+                $months[$row['ym']]['expenses'][] = $row;
+            }
+            $data['months'] = array_values(array_filter($months, static fn (array $m): bool => (bool) $m['expenses']));
+        }
+        return $this->render($response, 'search.twig', $this->lists() + $data);
     }
 
     private function lists(int $category = 0, int $person = 0, int $card = 0): array

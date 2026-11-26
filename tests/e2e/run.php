@@ -66,10 +66,10 @@ $check('signs in', $admin->path === "/months/$ym", $admin->path);
 $check('every table is utf8mb4', $id("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_collation<>'utf8mb4_unicode_ci'") === 0);
 $bill = $id('SELECT MIN(id) FROM bills');
 $groupBill = $id('SELECT MIN(id) FROM bills WHERE group_id IS NOT NULL');
-foreach (["/months/$ym", '/months/2031-01', "/months/$ym/expenses", "/months/$ym/expenses?q=a&person=1&category=x", "/months/$ym/cards", "/months/$ym/bills", "/months/$ym/installments", "/months/$ym/estimates", '/years/' . substr($ym, 0, 4), '/years/2031', '/years/' . substr($ym, 0, 4) . '/trends', '/years/' . substr($ym, 0, 4) . '/trends?fixed=0', '/years/2031/trends', '/review', '/profile', '/users', '/users/1', '/settings', '/catalogs/groups', '/catalogs/categories', '/catalogs/people', '/catalogs/cards', '/catalogs/bills', '/catalogs/categories/1', '/catalogs/bills/1', '/expenses/1', '/installments/1', "/bills/$bill", "/bills/$groupBill"] as $path) {
+foreach (["/months/$ym", '/months/2031-01', "/months/$ym/expenses", "/months/$ym/expenses?q=a&person=1&category=x", "/months/$ym/cards", "/months/$ym/bills", "/months/$ym/installments", "/months/$ym/estimates", '/years/' . substr($ym, 0, 4), '/years/2031', '/years/' . substr($ym, 0, 4) . '/trends', '/years/' . substr($ym, 0, 4) . '/trends?fixed=0', '/years/2031/trends', '/review', '/search', '/search?q=a&person=1&category=x&page=-3', '/profile', '/users', '/users/1', '/settings', '/catalogs/groups', '/catalogs/categories', '/catalogs/people', '/catalogs/cards', '/catalogs/bills', '/catalogs/categories/1', '/catalogs/bills/1', '/expenses/1', '/installments/1', "/bills/$bill", "/bills/$groupBill"] as $path) {
     $admin->get($path);
     $check("GET $path", $admin->status === 200 && !preg_match('/(Warning|Deprecated|Notice):/', $admin->body), [$admin->status, mb_substr(trim(strip_tags($admin->body)), -300)]);
-    $check("no raw keys in $path", !preg_match('/>\s*(app|nav|fields|status|modes|login|profile|month|incomes|estimates|expenses|review|cards|bills|installments|year|trends|group_kinds|catalogs|users|settings|errors)\.[a-z_.]+\s*</', $admin->body, $m), $m[0] ?? '');
+    $check("no raw keys in $path", !preg_match('/>\s*(app|nav|fields|status|modes|login|profile|month|incomes|estimates|expenses|review|search|cards|bills|installments|year|trends|group_kinds|catalogs|users|settings|errors)\.[a-z_.]+\s*</', $admin->body, $m), $m[0] ?? '');
 }
 foreach (['/nope', '/months/2026-13', '/expenses/999999', '/catalogs/users'] as $path) {
     $check("404 $path", $admin->get($path)->status === 404);
@@ -92,6 +92,24 @@ $check('moving the date opens the month', $admin->path === "/months/$next/expens
 $check('new month copies the salary', $id("SELECT i.amount FROM incomes i JOIN months m ON m.id=i.month_id WHERE m.ym=? AND kind='salary'", [$next]) === 1900);
 $admin->post("/expenses/$expenseId/delete");
 $check('expense deleted', $id('SELECT COUNT(*) FROM expenses WHERE id=?', [$expenseId]) === 0);
+
+// Search across months
+$first = Month::add($ym, -5);
+$check('search without filters only shows the form', $admin->get('/search')->status === 200 && !$admin->sees('id="results"'));
+$coffee = $id("SELECT COUNT(*) FROM expenses WHERE description LIKE '%coffee%' OR merchant LIKE '%coffee%'");
+$coffeeMonths = $id("SELECT COUNT(DISTINCT month_id) FROM expenses WHERE description LIKE '%coffee%'");
+$admin->get('/search?q=coffee');
+$check('search finds every month', $admin->sees("id=\"results\">$coffee expenses<") && substr_count($admin->body, 'class="result-month"') === $coffeeMonths, [$coffee, $coffeeMonths]);
+$check('month heading keeps the text filter', $admin->sees("href=\"/months/$ym/expenses?q=coffee\""));
+$inRange = $id("SELECT COUNT(*) FROM expenses x JOIN months m ON m.id=x.month_id WHERE x.description LIKE '%coffee%' AND m.ym BETWEEN ? AND ?", [Month::add($ym, -2), $ym]);
+$check('reversed range is swapped', $admin->get('/search?q=coffee&from=' . $ym . '&to=' . Month::add($ym, -2))->sees("id=\"results\">$inRange expenses<") && $admin->sees('value="' . Month::add($ym, -2) . '"'));
+$check('bad month is ignored', $admin->get('/search?q=coffee&from=2026-13&to=x')->sees("id=\"results\">$coffee expenses<"));
+$all = $id("SELECT COUNT(*) FROM expenses x JOIN months m ON m.id=x.month_id WHERE m.ym>=?", [$first]);
+$pages = (int) ceil($all / 50);
+$admin->get("/search?from=$first");
+$check('search is paged', $pages > 1 && $admin->sees("Page 1 of $pages") && substr_count($admin->body, '<td class="date">') === 50 && $admin->sees('rel="next"') && !$admin->sees('rel="prev"'), [$all, $pages]);
+$check('page out of range goes to the last one', $admin->get("/search?from=$first&page=999")->sees("Page $pages of $pages") && !$admin->sees('rel="next"') && $admin->sees('href="/search?from=' . $first . '&amp;page=' . ($pages - 1) . '"'));
+$check('LIKE wildcards are literal', $admin->get('/search?q=%25')->sees('No expenses match.'));
 
 // Bills
 $pending = $id("SELECT b.id FROM bills b JOIN months m ON m.id=b.month_id WHERE m.ym=? AND b.name='Music'", [$next]);

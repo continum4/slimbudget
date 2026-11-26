@@ -1,0 +1,43 @@
+{% extends 'base.twig' %}
+{% import '_macros.twig' as ui %}
+{% block title %}{{ t('search.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('search.title') }}</h1>
+<section class="card">
+  <p class="note below">{{ t('search.help') }}</p>
+  <search><form method="get" action="/search" class="form-grid two-col">
+    <div class="field wide"><label for="f-q">{{ t('expenses.search') }}</label><input type="search" id="f-q" name="q" value="{{ filters.q }}" enterkeyhint="search" autocorrect="off" autocapitalize="none" spellcheck="false"{% if not active %} autofocus{% endif %}></div>
+    {% for key in ['from', 'to'] %}
+    <div class="field"><label for="f-{{ key }}">{{ t('search.' ~ key) }}</label><input type="month" id="f-{{ key }}" name="{{ key }}" placeholder="YYYY-MM" pattern="20\d\d-(0[1-9]|1[0-2])" value="{{ filters[key] }}"></div>
+    {% endfor %}
+    {% for key, rows in {group: groups, person: people, card: cards} %}
+    <div class="field"><label for="f-{{ key }}">{{ t('fields.' ~ key) }}</label><select id="f-{{ key }}" name="{{ key }}"><option value="">{{ t('app.all') }}</option>{% for row in rows %}<option value="{{ row.id }}"{% if row.id == filters[key] %} selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+    {% endfor %}
+    <div class="field"><label for="f-category">{{ t('fields.category') }}</label><select id="f-category" name="category"><option value="">{{ t('app.all') }}</option>{{ ui.category_options(categories, filters.category) }}</select></div>
+    <div class="field form-end"><button class="primary">{{ t('search.submit') }}</button>{% if active %} <a class="button" href="/search">{{ t('expenses.clear') }}</a>{% endif %}</div>
+  </form></search>
+</section>
+{% if active %}
+{% set in_month = active|filter((v, k) => k not in ['from', 'to']) %}
+<section class="card" aria-labelledby="results">
+  <div class="page-head"><h2 id="results">{{ t('expenses.count', {count: count}) }}</h2><strong class="total">{{ total|money }}</strong></div>
+  {% for month in months %}
+  <div class="result-month">
+    <h3><a href="/months/{{ month.ym }}/expenses{{ in_month ? '?' ~ in_month|url_encode }}">{{ month.ym|month }}</a></h3>
+    <span class="note">{{ t('expenses.count', {count: month.count}) }}</span>
+    <strong>{{ month.total|money }}</strong>
+  </div>
+  {{ include('_expense_table.twig', {expenses: month.expenses, caption: month.ym|month}) }}
+  {% else %}
+  <p>{{ t('expenses.none') }}</p>
+  {% endfor %}
+  {% if pages > 1 %}
+  <nav class="pager" aria-label="{{ t('search.pages') }}">
+    {% if page > 1 %}<a class="button" href="/search?{{ active|merge({page: page - 1})|url_encode }}" rel="prev"><span aria-hidden="true">‹</span> {{ t('search.previous') }}</a>{% endif %}
+    <span>{{ t('search.page', {page: page, pages: pages}) }}</span>
+    {% if page < pages %}<a class="button next" href="/search?{{ active|merge({page: page + 1})|url_encode }}" rel="next">{{ t('search.next') }} <span aria-hidden="true">›</span></a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
